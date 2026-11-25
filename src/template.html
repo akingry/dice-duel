@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a0e06" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Dice Duel — a tavern game</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='6' width='52' height='52' rx='12' fill='%23ecdcb9' stroke='%235a3a1a' stroke-width='3'/%3E%3Ccircle cx='20' cy='20' r='6' fill='%23201208'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23201208'/%3E%3Ccircle cx='44' cy='44' r='6' fill='%23201208'/%3E%3C/svg%3E" />
+  <style>
+/*__STYLES__*/
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="table-wrap" id="tableWrap">
+      <canvas id="gameCanvas" aria-label="3D dice table"></canvas>
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="popup-layer" id="popupLayer" aria-hidden="true"></div>
+
+      <div class="turn-ribbon player" id="turnRibbon" aria-live="polite">Your throw</div>
+
+      <div class="turn-pouch empty" id="turnPouch" aria-live="polite">
+        <span class="turn-pouch-label" id="turnPouchLabel">At stake this turn</span>
+        <strong id="turnScore">0</strong>
+      </div>
+      <div class="banner" id="banner">First to 5,000 wins.</div>
+
+      <div class="stamp" id="stamp" aria-live="assertive"></div>
+
+      <div class="end-modal" id="endModal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+        <div class="end-card">
+          <div class="end-crest" aria-hidden="true">⚜</div>
+          <h2 id="endTitle">Victory</h2>
+          <p id="endText"></p>
+          <div class="end-actions">
+            <button id="endAgainBtn" class="btn primary">Play again</button>
+            <button id="endMenuBtn" class="btn ghost">Main menu</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <header class="panel-head">
+        <div class="crest" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><path d="M32 3 L58 12 V30 C58 46 46 56 32 61 C18 56 6 46 6 30 V12 Z" fill="#3a1a0e" stroke="#c9963f" stroke-width="3"/><rect x="20" y="20" width="24" height="24" rx="5" fill="#ecdcb9" stroke="#5a3a1a" stroke-width="2"/><circle cx="27" cy="27" r="3" fill="#201208"/><circle cx="32" cy="32" r="3" fill="#201208"/><circle cx="37" cy="37" r="3" fill="#201208"/></svg>
+        </div>
+        <div>
+          <h1>Dice Duel</h1>
+          <p class="sub">A tavern game · first to 5,000</p>
+        </div>
+      </header>
+
+      <section class="scores" id="scores">
+        <div class="score-row player" id="playerRow">
+          <div class="score-top"><span class="who">You</span><strong class="js-my-total">0</strong></div>
+          <div class="bar"><span class="js-my-bar"></span></div>
+        </div>
+        <div class="score-row ai" id="aiRow">
+          <div class="score-top"><span class="who js-opp-name">Computer</span><strong class="js-opp-total">0</strong></div>
+          <div class="bar"><span class="js-opp-bar"></span></div>
+        </div>
+        <div class="mini-stats">
+          <div><span>Kept this turn</span><b id="bankedThisTurn">0</b></div>
+          <div><span>Selected</span><b id="selectedScore">0</b></div>
+        </div>
+        <span class="net-badge" id="netBadge" hidden>● Online</span>
+        <button class="sheet-btn" id="sheetBtn" aria-label="Menu, rules and log">☰</button>
+      </section>
+
+      <section class="controls" id="controls">
+        <button id="rollBtn" class="btn primary"><span>Roll dice</span><kbd>Space</kbd></button>
+        <button id="continueBtn" class="btn" disabled><span>Keep &amp; roll on</span><small class="btn-sub">risk it</small><kbd>C</kbd></button>
+        <button id="passBtn" class="btn gold" disabled><span>Keep &amp; bank</span><small class="btn-sub">bank points</small><kbd>P</kbd></button>
+      </section>
+
+      <div class="sheet-scrim" id="sheetScrim"></div>
+      <section class="extras" id="extras">
+        <div class="sheet-head">
+          <h2>Dice Duel</h2>
+          <button class="sheet-close" id="sheetCloseBtn" aria-label="Close">✕</button>
+        </div>
+        <div class="btn-row small">
+          <button id="newGameBtn" class="btn ghost">New match</button>
+          <button id="soundBtn" class="btn ghost" aria-pressed="true">Sound on</button>
+          <button id="menuBtn" class="btn ghost">Main menu</button>
+        </div>
+
+        <details class="scoring-key" id="scoringKey" open>
+          <summary>Scoring</summary>
+          <div class="key-grid">
+            <div><b>Single 1</b><span>100</span></div>
+            <div><b>Single 5</b><span>50</span></div>
+            <div><b>Three 1s</b><span>1,000</span></div>
+            <div><b>Three 2s</b><span>200</span></div>
+            <div><b>Three 3s</b><span>300</span></div>
+            <div><b>Three 4s</b><span>400</span></div>
+            <div><b>Three 5s</b><span>500</span></div>
+            <div><b>Three 6s</b><span>600</span></div>
+            <div><b>Four of a kind</b><span>2× triple</span></div>
+            <div><b>Five of a kind</b><span>4× triple</span></div>
+            <div><b>Six of a kind</b><span>8× triple</span></div>
+            <div><b>1-2-3-4-5</b><span>750</span></div>
+            <div><b>2-3-4-5-6</b><span>750</span></div>
+            <div><b>1-2-3-4-5-6</b><span>1,500</span></div>
+          </div>
+          <p class="key-note">Every kept die must score. A roll with nothing to keep is a bust: the turn's points are lost. Score all six and you get them back ("hot dice").</p>
+        </details>
+
+        <section class="log-wrap">
+          <h2>Chronicle</h2>
+          <ol id="log" class="log"></ol>
+        </section>
+      </section>
+    </aside>
+  </main>
+
+  <div class="lobby" id="lobby" role="dialog" aria-modal="true" aria-labelledby="lobbyTitle">
+    <div class="lobby-card">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M32 3 L58 12 V30 C58 46 46 56 32 61 C18 56 6 46 6 30 V12 Z" fill="#3a1a0e" stroke="#c9963f" stroke-width="3"/><rect x="20" y="20" width="24" height="24" rx="5" fill="#ecdcb9" stroke="#5a3a1a" stroke-width="2"/><circle cx="27" cy="27" r="3" fill="#201208"/><circle cx="32" cy="32" r="3" fill="#201208"/><circle cx="37" cy="37" r="3" fill="#201208"/></svg>
+      </div>
+      <h2 id="lobbyTitle">Dice Duel</h2>
+      <p class="lobby-sub">A tavern game · first to 5,000</p>
+
+      <button id="playAiBtn" class="btn primary">Play the computer</button>
+
+      <div class="lobby-divider"><span>or play a friend online</span></div>
+
+      <label class="room-label" for="roomInput">Room number</label>
+      <div class="room-row">
+        <input id="roomInput" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="9" placeholder="e.g. 48213" />
+        <button id="joinBtn" class="btn gold">Join</button>
+      </div>
+      <p class="lobby-status" id="lobbyStatus" aria-live="polite">Agree on a number with your friend, then both join it.</p>
+      <button id="cancelJoinBtn" class="btn ghost" hidden>Cancel</button>
+    </div>
+  </div>
+
+  <script>
+/*__PEERJS__*/
+  </script>
+  <script>
+/*__SCRIPT__*/
+  </script>
+</body>
+</html>
