@@ -1,0 +1,11 @@
+All sound effects in this folder are recordings by Kenney (www.kenney.nl),
+released under Creative Commons Zero (CC0 1.0, public domain):
+  - Casino Audio      (dice shakes, dice grabs)          kenney.nl/assets/casino-audio
+  - Impact Sounds     (wood/metal/soft impacts)          kenney.nl/assets/impact-sounds
+  - RPG Audio         (handful of coins)                 kenney.nl/assets/rpg-audio
+Dice-throw recordings as distributed with Tabletop Club (github.com/drwhut/tabletop-club),
+also credited to Kenney. Converted to mono MP3 and trimmed of leading silence.
+
+harp_*.mp3: Folk Harp, single notes, from the Versilian Community Sample Library (VCSL)
+by Versilian Studios / Sam Gossner, released under CC0 1.0 (github.com/sgossner/VCSL).
+Trimmed to 2.6 s with a fade, converted to mono MP3.
