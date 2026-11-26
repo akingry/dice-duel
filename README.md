@@ -9,6 +9,29 @@ A 3D tavern dice game in the style of the Kingdom Come: Deliverance II dice mini
 
 It's a single self-contained page (`index.html`): Three.js for the 3D table and PeerJS for peer-to-peer play. PeerJS's free public service only introduces the two players; the game itself travels directly between the two devices.
 
+## Tokens
+
+Every match starts with a **token draw**: each player takes one normal turn, and what they bank sets the metal of their token (a bust means no token). Then each player picks one of six Greek-myth statuettes. The lower draw throws first.
+
+| Metal | Draw score |
+|---|---|
+| Wood | 50+ |
+| Iron | 150+ |
+| Copper | 250+ |
+| Bronze | 400+ |
+| Tin | 550+ |
+| Silver | 750+ |
+| Gold | 1,000+ |
+
+| Token | Effect (wood → gold) |
+|---|---|
+| Sandal of Hermes — *Head Start* | Start with 50 → 500 points |
+| Laurel of Nike — *Rally* | Once: arm it; your next banked turn gets +10% → +50% |
+| Phoenix — *Second Wind* | Once: on a bust, keep 15% → 75% of that turn's points |
+| Horn of Tyche — *Fortune* | Re-roll one die after a throw, even a bust; 1 → 5 uses |
+| Charon's Ferry — *Toll* | Once: right after your opponent banks, cut that turn by 10% → 50% |
+| Aegis of Athena — *Ward* | Blocks the opponent's token if yours is the same metal or better; otherwise drops theirs two metals |
+
 ## Rules
 
 First to **5,000** wins. Every kept die must score. A roll with nothing to keep is a bust and the turn's unbanked points are lost. Score all six dice ("hot dice") and you get all six back.

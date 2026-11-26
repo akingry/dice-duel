@@ -430,7 +430,7 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
   }
   .net-badge { top: auto; bottom: -10px; right: 56px; font-size: 10px; }
 
-  .turn-ribbon { top: calc(env(safe-area-inset-top) + 84px); font-size: 19px; padding: 5px 30px 7px; }
+  .turn-ribbon { top: calc(env(safe-area-inset-top) + 104px); font-size: 19px; padding: 5px 30px 7px; }
 
   .controls {
     position: fixed; z-index: 6; left: 0; right: 0; bottom: 0;
@@ -500,6 +500,111 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
   .btn-row.small .btn { min-height: 34px; font-size: 12px; white-space: nowrap; padding: 4px; }
 }
 
+/* ---------- Token charms ---------- */
+.token-chip {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; margin-top: 6px; padding: 3px 8px 3px 3px;
+  font: inherit; font-size: 12.5px; text-align: left; color: #3b2713;
+  background: rgba(90, 58, 26, .1);
+  border: 1px solid rgba(90, 58, 26, .25); border-radius: 22px;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+button.token-chip { cursor: default; }
+.token-chip img { width: 40px; height: 40px; margin: -4px 0; flex: none; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.token-chip .tc-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-chip.spent img { filter: grayscale(.8) brightness(.8); opacity: .65; }
+.token-chip.spent .tc-text { text-decoration: line-through; opacity: .7; }
+.token-chip.actionable { cursor: pointer; border-color: var(--gold); background: rgba(201, 150, 63, .22); box-shadow: 0 0 0 0 rgba(201,150,63,.6); animation: chipPulse 1.6s ease-in-out infinite; }
+.token-chip.armed { border-color: #8e2418; background: rgba(192, 57, 43, .18); }
+.token-chip.active-mode { border-color: #c0392b; background: rgba(192, 57, 43, .28); }
+@keyframes chipPulse { 50% { box-shadow: 0 0 0 4px rgba(201,150,63,.18); } }
+
+.prompt-bar {
+  position: absolute; left: 50%; bottom: 128px; z-index: 6;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  max-width: min(640px, calc(100% - 24px));
+  padding: 10px 14px;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--parch), var(--parch-2));
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px #5a3a1a, 0 14px 30px rgba(0,0,0,.55);
+  transform: translate(-50%, 10px); opacity: 0; pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.prompt-bar.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+.prompt-bar span { font-size: 15px; }
+.prompt-bar .btn { min-height: 38px; padding: 6px 14px; font-size: 14px; }
+.prompt-bar .btn.ghost { color: var(--text); }
+
+.pick-modal {
+  position: absolute; inset: 0; z-index: 9;
+  display: grid; place-items: center; grid-template-columns: minmax(0, 1fr);
+  padding: 16px; overflow: auto;
+  background: rgba(6, 3, 1, .62);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none; transition: opacity .35s ease;
+}
+.pick-modal.show { opacity: 1; pointer-events: auto; }
+.pick-card-wrap {
+  width: min(720px, 100%); justify-self: center;
+  padding: 18px 18px 16px; text-align: center; color: var(--ink);
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.35), transparent 60%), linear-gradient(180deg, var(--parch), var(--parch-2));
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px #5a3a1a, 0 0 0 6px var(--parch-dark), 0 0 0 8px #5a3a1a, 0 30px 80px rgba(0,0,0,.7);
+}
+.pick-card-wrap h2 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 40px; color: var(--blood); }
+.pick-card-wrap > p { margin: 4px 0 12px; font-size: 14.5px; color: #4f381f; }
+.pick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pick-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 8px 10px;
+  font: inherit; color: var(--ink); text-align: center; cursor: pointer;
+  background: rgba(255, 250, 235, .45);
+  border: 1px solid rgba(90, 58, 26, .35); border-radius: 6px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  touch-action: manipulation;
+}
+.pick-card:hover:not(:disabled) { transform: translateY(-3px); background: rgba(255, 250, 235, .75); box-shadow: 0 8px 18px rgba(80, 50, 20, .25); }
+.pick-card:disabled { cursor: default; opacity: .5; }
+.pick-card.chosen { opacity: 1; background: rgba(201,150,63,.3); box-shadow: 0 0 0 2px var(--gold); }
+.pick-card canvas { width: 130px; height: 130px; filter: drop-shadow(0 6px 5px rgba(60,30,10,.35)); }
+.pick-card b { font-size: 16px; }
+.pick-card em { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8e2418; font-style: normal; }
+.pick-card span { font-size: 12.5px; line-height: 1.3; color: #4f381f; }
+.pick-wait { margin: 10px 0 2px; font-style: italic; color: #4f381f; }
+
+.token-key .tk-metals { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 0 14px 8px; font-size: 12px; }
+.token-key .tk-metals span { display: inline-flex; align-items: center; gap: 3px; }
+.token-key .tk-metals img { width: 22px; height: 22px; }
+.token-key .tk-row { display: flex; gap: 8px; align-items: center; padding: 4px 14px; border-bottom: 1px dotted rgba(90, 58, 26, .35); }
+.token-key .tk-row img { width: 48px; height: 48px; flex: none; }
+.token-key .tk-row b { font-size: 14px; }
+.token-key .tk-row em { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8e2418; font-style: normal; }
+.token-key .tk-row span { display: block; font-size: 12.5px; line-height: 1.3; color: #4f381f; }
+.token-key .tk-row i { color: #6b4c2a; }
+.token-key .key-note { margin-top: 0; }
+.popup.bad { color: #ff8a70; text-shadow: 0 0 12px rgba(255, 80, 50, .7), 0 3px 0 #2a0806; }
+
+@media (max-width: 760px) {
+  .token-chip { margin-top: 4px; padding: 1px 6px 1px 1px; font-size: 10.5px; gap: 4px; }
+  .token-chip img { width: 24px; height: 24px; }
+  .prompt-bar { bottom: calc(env(safe-area-inset-bottom) + 182px); gap: 6px; padding: 8px 10px; }
+  .prompt-bar span { font-size: 13.5px; width: 100%; text-align: center; }
+  .pick-modal { padding: calc(env(safe-area-inset-top) + 104px) 8px calc(env(safe-area-inset-bottom) + 90px); place-items: start center; }
+  .pick-card-wrap { padding: 12px 10px; }
+  .pick-card-wrap h2 { font-size: 30px; }
+  .pick-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
+  .pick-card canvas { width: 92px; height: 92px; }
+  .pick-card b { font-size: 14px; }
+  .pick-card span { font-size: 11.5px; }
+}
+@media (max-height: 520px) and (min-width: 600px) {
+  .pick-grid { grid-template-columns: repeat(6, 1fr); }
+  .pick-card canvas { width: 70px; height: 70px; }
+  .pick-card span { display: none; }
+  .prompt-bar { bottom: 84px; }
+}
+
   </style>
 </head>
 <body>
@@ -516,6 +621,16 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
         <strong id="turnScore">0</strong>
       </div>
       <div class="banner" id="banner">First to 5,000 wins.</div>
+      <div class="prompt-bar" id="promptBar" role="group" aria-live="polite"></div>
+
+      <div class="pick-modal" id="pickModal" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+        <div class="pick-card-wrap">
+          <h2 id="pickTitle">Your token</h2>
+          <p id="pickSub"></p>
+          <div class="pick-grid" id="pickGrid"></div>
+          <p class="pick-wait" id="pickWait" hidden></p>
+        </div>
+      </div>
 
       <div class="stamp" id="stamp" aria-live="assertive"></div>
 
@@ -547,10 +662,12 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
         <div class="score-row player" id="playerRow">
           <div class="score-top"><span class="who">You</span><strong class="js-my-total">0</strong></div>
           <div class="bar"><span class="js-my-bar"></span></div>
+          <button class="token-chip" id="myChip" hidden><img alt="" hidden /><span class="tc-text"></span></button>
         </div>
         <div class="score-row ai" id="aiRow">
           <div class="score-top"><span class="who js-opp-name">Computer</span><strong class="js-opp-total">0</strong></div>
           <div class="bar"><span class="js-opp-bar"></span></div>
+          <div class="token-chip" id="oppChip" hidden><img alt="" hidden /><span class="tc-text"></span></div>
         </div>
         <div class="mini-stats">
           <div><span>Kept this turn</span><b id="bankedThisTurn">0</b></div>
@@ -599,6 +716,11 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
           <p class="key-note">Every kept die must score. A roll with nothing to keep is a bust: the turn's points are lost. Score all six and you get them back ("hot dice").</p>
         </details>
 
+        <details class="scoring-key token-key" id="tokenKey">
+          <summary>Tokens</summary>
+          <div id="tokenKeyBody"></div>
+        </details>
+
         <section class="log-wrap">
           <h2>Chronicle</h2>
           <ol id="log" class="log"></ol>
@@ -613,7 +735,7 @@ h1 { margin: 0; font-family: var(--display); font-weight: normal; font-size: 38p
         <svg viewBox="0 0 64 64"><path d="M32 3 L58 12 V30 C58 46 46 56 32 61 C18 56 6 46 6 30 V12 Z" fill="#3a1a0e" stroke="#c9963f" stroke-width="3"/><rect x="20" y="20" width="24" height="24" rx="5" fill="#ecdcb9" stroke="#5a3a1a" stroke-width="2"/><circle cx="27" cy="27" r="3" fill="#201208"/><circle cx="32" cy="32" r="3" fill="#201208"/><circle cx="37" cy="37" r="3" fill="#201208"/></svg>
       </div>
       <h2 id="lobbyTitle">Dice Duel</h2>
-      <p class="lobby-sub">A tavern game · first to 5,000</p>
+      <p class="lobby-sub">A tavern game · first to 5,000 · every match starts with a draw for a charm</p>
 
       <button id="playAiBtn" class="btn primary">Play the computer</button>
 
@@ -53716,6 +53838,15 @@ const menuBtn = $('#menuBtn');
 const sheetBtn = $('#sheetBtn');
 const sheetCloseBtn = $('#sheetCloseBtn');
 const endMenuBtn = $('#endMenuBtn');
+const myChip = $('#myChip');
+const oppChip = $('#oppChip');
+const promptBar = $('#promptBar');
+const pickModal = $('#pickModal');
+const pickTitle = $('#pickTitle');
+const pickSub = $('#pickSub');
+const pickGrid = $('#pickGrid');
+const pickWait = $('#pickWait');
+const tokenKeyBody = $('#tokenKeyBody');
 const playerRow = $('#playerRow');
 const aiRow = $('#aiRow');
 const selectedScoreEl = $('#selectedScore');
@@ -54478,6 +54609,8 @@ function animate() {
 
   dice.forEach(die => updateDie(die, dt, t));
   updateCoins(dt);
+  updateTokens3D(dt);
+  updateTurntables(t);
   updatePopups();
   renderer.render(scene, camera);
 }
@@ -54780,6 +54913,595 @@ function playToneClick(ctx, destination, time, frequency, duration, volume) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Tokens: data, artwork (one painter feeds both the cards and 3D)     */
+/* ------------------------------------------------------------------ */
+
+const METALS = ['Wood', 'Iron', 'Copper', 'Bronze', 'Tin', 'Silver', 'Gold'];
+const TIER_MIN = [50, 150, 250, 400, 550, 750, 1000];
+const TOKEN_TYPES = ['headstart', 'rally', 'wind', 'fortune', 'toll', 'ward'];
+const TOKEN_INFO = {
+  headstart: { name: 'Sandal of Hermes', role: 'Head Start', vals: [50, 100, 150, 200, 300, 400, 500], text: v => `Start the match with ${fmt(v)} points.` },
+  rally: { name: 'Laurel of Nike', role: 'Rally', vals: [10, 15, 20, 25, 30, 40, 50], text: v => `Once: arm it and your next banked turn gets +${v}%.` },
+  wind: { name: 'Phoenix', role: 'Second Wind', vals: [15, 25, 35, 45, 55, 65, 75], text: v => `Once: when you bust, keep ${v}% of that turn's points.` },
+  fortune: { name: 'Horn of Tyche', role: 'Fortune', vals: [1, 2, 2, 3, 3, 4, 5], text: v => `Re-roll one die after a throw, even a bust. ${v} use${v > 1 ? 's' : ''}.` },
+  toll: { name: 'Charon’s Ferry', role: 'Toll', vals: [10, 15, 20, 25, 30, 40, 50], text: v => `Once: right after your opponent banks, cut that turn by ${v}%.` },
+  ward: { name: 'Aegis of Athena', role: 'Ward', vals: [0, 0, 0, 0, 0, 0, 0], text: () => `Blocks their token if yours is the same metal or better; otherwise drops theirs two metals.` }
+};
+const METAL_PAINT = [
+  { base: '#8a5a2b', light: '#c99460', dark: '#3f240e', side: 0x6b4420, metal: 0.0, rough: 0.75 },
+  { base: '#6a6f74', light: '#a3a9ae', dark: '#2e3134', side: 0x7a7f84, metal: 0.7, rough: 0.42 },
+  { base: '#b5653a', light: '#f2a57a', dark: '#5a2a10', side: 0xb5653a, metal: 0.95, rough: 0.38 },
+  { base: '#9a7738', light: '#dcb86f', dark: '#46320f', side: 0x9a7738, metal: 0.95, rough: 0.4 },
+  { base: '#a8acaf', light: '#e8eaec', dark: '#5a5e61', side: 0xa8acaf, metal: 0.9, rough: 0.42 },
+  { base: '#c8cdd5', light: '#ffffff', dark: '#737985', side: 0xd6dbe3, metal: 1.0, rough: 0.25 },
+  { base: '#d4a334', light: '#ffe8a0', dark: '#755010', side: 0xe0ad3c, metal: 1.0, rough: 0.28 }
+];
+
+const round5 = (x) => Math.round(x / 5) * 5;
+function tierFor(score) { let t = -1; TIER_MIN.forEach((m, i) => { if (score >= m) t = i; }); return t; }
+function tokenVal(tok) { return TOKEN_INFO[tok.type].vals[tok.tier]; }
+function makeToken(type, tier) {
+  return { type, tier, uses: type === 'fortune' ? TOKEN_INFO.fortune.vals[tier] : 1, armed: type === 'wind', cancelled: false, spent: false };
+}
+function tokenUsable(tok) { return !!tok && !tok.cancelled && !tok.spent && tok.uses > 0; }
+const aMetal = (tier) => (/^[AEIOU]/.test(METALS[tier]) ? 'an ' : 'a ') + METALS[tier];
+function tokenTitle(tok) { return `${METALS[tok.tier]} ${TOKEN_INFO[tok.type].name}`; }
+
+/* ------------------------------------------------------------------ */
+/* Token statuettes: small cast/carved Greek-myth game pieces on a     */
+/* base, fully 3D, built from primitives so they read from every side. */
+/* ------------------------------------------------------------------ */
+
+const STATUE_HEIGHT = 1.6;
+const statueProto = new Map();      // type -> Group (materials assigned per tier when cloned)
+const statueMatCache = new Map();   // `${tier}-${slot}` -> material
+
+function makeWoodGrain() {
+  const [cnv, ctx] = canvas2d(256);
+  ctx.fillStyle = '#9a6a3c'; ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 70; i++) {
+    ctx.strokeStyle = `rgba(${50 + Math.random() * 30}, ${25 + Math.random() * 15}, 8, ${rand(0.15, 0.4)})`;
+    ctx.lineWidth = rand(0.8, 2.6);
+    const y = rand(0, 256);
+    ctx.beginPath(); ctx.moveTo(0, y);
+    ctx.bezierCurveTo(85, y + rand(-12, 12), 170, y + rand(-12, 12), 256, y + rand(-8, 8));
+    ctx.stroke();
+  }
+  const t = finishTexture(cnv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(2, 2);
+  return t;
+}
+let woodGrainTex = null;
+
+function statueMaterial(tier, slot) {
+  const key = `${tier}-${slot}`;
+  if (statueMatCache.has(key)) return statueMatCache.get(key);
+  const p = METAL_PAINT[tier];
+  let m;
+  if (tier === 0) {
+    if (!woodGrainTex) woodGrainTex = makeWoodGrain();
+    m = new THREE.MeshStandardMaterial({ map: woodGrainTex, color: slot === 'dark' ? 0x5a3a20 : (slot === 'accent' ? 0xd8b080 : 0xffffff), roughness: 0.72, metalness: 0 });
+  } else {
+    const base = new THREE.Color(p.side);
+    if (slot === 'dark') base.multiplyScalar(0.5);
+    if (slot === 'accent') base.lerp(new THREE.Color(0xffffff), tier >= 5 ? 0.15 : 0.25);
+    if (tier === 3 && slot === 'dark') base.set(0x2f4a3a); // bronze patina in the recesses
+    if (tier === 2 && slot === 'dark') base.set(0x2f4a40);
+    m = new THREE.MeshStandardMaterial({
+      color: base, metalness: slot === 'dark' ? p.metal * 0.6 : p.metal, roughness: slot === 'dark' ? Math.min(1, p.rough + 0.25) : p.rough,
+      envMapIntensity: 1.6
+    });
+  }
+  m.side = THREE.DoubleSide;
+  statueMatCache.set(key, m);
+  return m;
+}
+
+// Small geometry helpers. Every mesh carries a material "slot": main | dark | accent.
+function part(geo, slot = 'main') {
+  const m = new THREE.Mesh(geo, null);
+  m.userData.slot = slot;
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+function ellipsoid(rx, ry, rz, slot) {
+  const g = new THREE.SphereGeometry(1, 20, 14);
+  g.scale(rx, ry, rz);
+  return part(g, slot);
+}
+function feather(len, width, thick, slot) {
+  // Leaf/feather: pointed ellipsoid along +y from the origin, with a raised spine.
+  const g = new THREE.SphereGeometry(1, 16, 12);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const taper = 1 - Math.pow(Math.max(0, y), 2) * 0.55;
+    pos.setX(i, pos.getX(i) * width * taper);
+    pos.setZ(i, pos.getZ(i) * thick * (1 + 0.6 * (1 - Math.abs(pos.getX(i)))));
+    pos.setY(i, (y + 1) * len / 2);
+  }
+  g.computeVertexNormals();
+  return part(g, slot);
+}
+function tube(points, radius, slot, tubular = 40, taper = false) {
+  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  const g = new THREE.TubeGeometry(curve, tubular, radius, 10, false);
+  if (taper) {
+    const pos = g.attributes.position;
+    const segs = tubular + 1;
+    const ring = 11;
+    for (let i = 0; i < segs; i++) {
+      const t = i / tubular;
+      const c = curve.getPointAt(t);
+      const f = taper === 'both' ? Math.sin(Math.PI * Math.min(0.98, Math.max(0.02, t))) * 0.9 + 0.1 : 1 - t * 0.85;
+      for (let j = 0; j < ring; j++) {
+        const k = i * ring + j;
+        pos.setXYZ(k, c.x + (pos.getX(k) - c.x) * f, c.y + (pos.getY(k) - c.y) * f, c.z + (pos.getZ(k) - c.z) * f);
+      }
+    }
+    g.computeVertexNormals();
+  }
+  return part(g, slot);
+}
+function lathe(profile, slot, segs = 32) {
+  return part(new THREE.LatheGeometry(profile.map(([x, y]) => new THREE.Vector2(x, y)), segs), slot);
+}
+function place(mesh, x, y, z, rx = 0, ry = 0, rz = 0) {
+  mesh.position.set(x, y, z);
+  mesh.rotation.set(rx, ry, rz);
+  return mesh;
+}
+function bail(group) {
+  // Cord loop on the very top.
+  group.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(group);
+  const c = box.getCenter(new THREE.Vector3());
+  const loop = part(new THREE.TorusGeometry(0.1, 0.028, 10, 28), 'main');
+  loop.position.set(c.x, box.max.y + 0.08, c.z);
+  group.add(loop);
+}
+
+/* --- Sandal of Hermes (Head Start) --- */
+function buildHermes() {
+  const g = new THREE.Group();
+  // Sole: footprint extruded with a soft bevel.
+  const foot = new THREE.Shape();
+  foot.moveTo(-0.62, 0);
+  foot.bezierCurveTo(-0.62, 0.2, -0.36, 0.24, -0.1, 0.2);
+  foot.bezierCurveTo(0.2, 0.17, 0.5, 0.26, 0.7, 0.16);
+  foot.bezierCurveTo(0.84, 0.08, 0.84, -0.12, 0.66, -0.18);
+  foot.bezierCurveTo(0.4, -0.25, 0.1, -0.13, -0.1, -0.17);
+  foot.bezierCurveTo(-0.38, -0.22, -0.62, -0.2, -0.62, 0);
+  const soleGeo = new THREE.ExtrudeGeometry(foot, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3, curveSegments: 20 });
+  soleGeo.rotateX(Math.PI / 2);
+  g.add(place(part(soleGeo, 'main'), 0, 0.11, 0));
+  // Heel cup and ankle cuff.
+  g.add(place(part(new THREE.CylinderGeometry(0.17, 0.2, 0.36, 28, 1, true, Math.PI * 0.15, Math.PI * 1.7), 'main'), -0.44, 0.32, 0, 0, Math.PI / 2, 0));
+  g.add(place(part(new THREE.TorusGeometry(0.175, 0.03, 8, 32), 'accent'), -0.44, 0.5, 0, Math.PI / 2, 0, 0));
+  // Straps over the instep and across the toes.
+  for (const [x, r, s] of [[-0.18, 0.19, 0.03], [0.1, 0.18, 0.028], [0.38, 0.17, 0.026]]) {
+    g.add(place(part(new THREE.TorusGeometry(r, s, 8, 24, Math.PI), 'accent'), x, 0.11, 0, 0, Math.PI / 2, 0));
+  }
+  g.add(tube([[-0.3, 0.42, 0.15], [-0.12, 0.28, 0.12], [0.1, 0.24, 0.08]], 0.022, 'accent'));
+  g.add(tube([[-0.3, 0.42, -0.15], [-0.12, 0.28, -0.12], [0.1, 0.24, -0.08]], 0.022, 'accent'));
+  // Wings sprouting from both sides of the heel.
+  for (const side of [1, -1]) {
+    const wing = new THREE.Group();
+    const n = 6;
+    for (let i = 0; i < n; i++) {
+      const f = feather(0.3 + i * 0.07, 0.075, 0.04, i % 2 ? 'main' : 'accent');
+      f.rotation.z = 0.25 + i * 0.22;
+      f.rotation.x = side * 0.25;
+      f.position.set(-0.02 * i, 0.02 * i, 0);
+      wing.add(f);
+    }
+    wing.position.set(-0.46, 0.42, side * 0.2);
+    wing.rotation.y = side * 0.35;
+    wing.rotation.z = 0.15;
+    g.add(wing);
+  }
+  return g;
+}
+
+/* --- Laurel wreath of Nike (Rally) --- */
+function buildNike() {
+  const g = new THREE.Group();
+  const R = 0.62;
+  g.add(place(part(new THREE.TorusGeometry(R, 0.05, 10, 64, Math.PI * 1.86), 'dark'), 0, 0, 0, 0, 0, -Math.PI / 2 + Math.PI * 0.07));
+  for (const side of [1, -1]) {
+    const steps = 11;
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const a = -Math.PI / 2 + side * t * Math.PI * 0.9;
+      const px = Math.cos(a) * R, py = Math.sin(a) * R;
+      const tangent = a + side * Math.PI / 2;
+      for (const [off, tilt, dz] of [[0.05, 0.65, 0.03], [-0.05, -0.6, -0.03]]) {
+        const leaf = feather(0.32 - t * 0.08, 0.075, 0.026, (i + (off > 0 ? 0 : 1)) % 2 ? 'main' : 'accent');
+        leaf.position.set(px + Math.cos(a) * off, py + Math.sin(a) * off, dz);
+        leaf.rotation.set(dz * 4, -dz * 3, tangent - Math.PI / 2 + side * tilt);
+        g.add(leaf);
+      }
+      if (i % 3 === 1) g.add(place(ellipsoid(0.035, 0.035, 0.035, 'accent'), px + Math.cos(a) * 0.02, py + Math.sin(a) * 0.02, 0.07));
+    }
+  }
+  // Ribbon bow at the bottom.
+  for (const side of [1, -1]) {
+    g.add(place(part(new THREE.TorusGeometry(0.09, 0.03, 8, 24), 'accent'), side * 0.1, -R - 0.02, 0.04, 0.3, side * 0.5, 0));
+    g.add(tube([[side * 0.02, -R - 0.06, 0.05], [side * 0.12, -R - 0.2, 0.08], [side * 0.2, -R - 0.34, 0.02], [side * 0.3, -R - 0.42, -0.04]], 0.026, 'accent', 24));
+  }
+  g.add(place(ellipsoid(0.05, 0.05, 0.05, 'accent'), 0, -R - 0.03, 0.06));
+  return g;
+}
+
+/* --- Phoenix rising from flames (Second Wind) --- */
+function buildPhoenix() {
+  const g = new THREE.Group();
+  // Flame pedestal.
+  g.add(lathe([[0, 0], [0.32, 0], [0.34, 0.04], [0.26, 0.08], [0.2, 0.14], [0, 0.16]], 'dark'));
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    const h = 0.28 + (i % 3) * 0.08;
+    const flame = tube([[Math.cos(a) * 0.24, 0.1, Math.sin(a) * 0.24], [Math.cos(a + 0.3) * 0.2, 0.1 + h * 0.6, Math.sin(a + 0.3) * 0.2], [Math.cos(a + 0.6) * 0.12, 0.1 + h, Math.sin(a + 0.6) * 0.12]], 0.06, i % 2 ? 'accent' : 'main', 20, true);
+    g.add(flame);
+  }
+  // Body, chest and neck.
+  g.add(place(ellipsoid(0.17, 0.3, 0.17, 'main'), 0, 0.62, 0, -0.15, 0, 0));
+  g.add(place(ellipsoid(0.12, 0.16, 0.12, 'accent'), 0, 0.68, 0.07, -0.3, 0, 0));
+  g.add(place(ellipsoid(0.07, 0.15, 0.07, 'main'), 0, 0.92, 0.04, 0.3, 0, 0));
+  // Head, beak, eyes, crest.
+  g.add(place(ellipsoid(0.1, 0.09, 0.11, 'main'), 0, 1.06, 0.06));
+  const beak = part(new THREE.ConeGeometry(0.035, 0.14, 12), 'accent');
+  g.add(place(beak, 0, 1.03, 0.2, Math.PI / 2 + 0.35, 0, 0));
+  for (const s of [1, -1]) g.add(place(ellipsoid(0.02, 0.02, 0.02, 'dark'), s * 0.065, 1.08, 0.12));
+  for (let i = 0; i < 3; i++) {
+    const c = feather(0.18 + i * 0.04, 0.03, 0.025, 'accent');
+    g.add(place(c, 0, 1.12, 0.02, -0.7 - i * 0.25, 0, 0));
+  }
+  // Wings raised in a V, feathers fanned.
+  for (const side of [1, -1]) {
+    const wing = new THREE.Group();
+    for (let i = 0; i < 8; i++) {
+      const f = feather(0.42 + i * 0.05 - (i > 5 ? (i - 5) * 0.08 : 0), 0.07, 0.04, i % 2 ? 'main' : 'accent');
+      f.rotation.z = -side * (0.2 + i * 0.17);
+      f.position.set(side * i * 0.012, -i * 0.015, -i * 0.004);
+      wing.add(f);
+    }
+    wing.position.set(side * 0.12, 0.74, -0.04);
+    wing.rotation.set(-0.25, side * -0.35, side * -0.15);
+    g.add(wing);
+  }
+  // Tail streaming down into the flames.
+  for (let i = 0; i < 5; i++) {
+    const a = (i - 2) * 0.28;
+    g.add(tube([[0, 0.45, -0.1], [Math.sin(a) * 0.15, 0.32, -0.22], [Math.sin(a) * 0.3, 0.2, -0.3]], 0.03, i % 2 ? 'main' : 'accent', 18, true));
+  }
+  return g;
+}
+
+/* --- Horn of Tyche, the cornucopia (Fortune) --- */
+function buildTyche() {
+  const g = new THREE.Group();
+  const curve = new THREE.CatmullRomCurve3([
+    [-0.62, 0.32, 0], [-0.74, 0.16, 0.02], [-0.66, 0.02, 0.02], [-0.42, -0.02, 0], [-0.1, 0.04, 0], [0.2, 0.18, 0], [0.42, 0.38, 0]
+  ].map(p => new THREE.Vector3(...p)));
+  const M = 60, S = 24;
+  const frames = curve.computeFrenetFrames(M, false);
+  const verts = [], idx = [];
+  const radiusAt = (t) => 0.015 + 0.3 * Math.pow(t, 1.6) + 0.012 * Math.sin(t * 60) * t;
+  for (let i = 0; i <= M; i++) {
+    const t = i / M;
+    const c = curve.getPointAt(t);
+    const N = frames.normals[i], B = frames.binormals[i];
+    const r = radiusAt(t);
+    for (let j = 0; j <= S; j++) {
+      const a = (j / S) * Math.PI * 2;
+      verts.push(c.x + (Math.cos(a) * N.x + Math.sin(a) * B.x) * r, c.y + (Math.cos(a) * N.y + Math.sin(a) * B.y) * r, c.z + (Math.cos(a) * N.z + Math.sin(a) * B.z) * r);
+    }
+  }
+  for (let i = 0; i < M; i++) for (let j = 0; j < S; j++) {
+    const a = i * (S + 1) + j, b = a + S + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  const hornGeo = new THREE.BufferGeometry();
+  hornGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  hornGeo.setIndex(idx);
+  hornGeo.computeVertexNormals();
+  g.add(part(hornGeo, 'main'));
+  // Raised bands around the horn.
+  for (const t of [0.35, 0.55, 0.75, 0.97]) {
+    const c = curve.getPointAt(t), tan = curve.getTangentAt(t);
+    const band = part(new THREE.TorusGeometry(radiusAt(t) + 0.008, 0.016, 8, 32), 'accent');
+    band.position.copy(c);
+    band.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tan);
+    g.add(band);
+  }
+  // Fruit spilling from the mouth.
+  const m = curve.getPointAt(1);
+  g.add(place(ellipsoid(0.13, 0.12, 0.13, 'accent'), m.x + 0.02, m.y + 0.08, m.z + 0.08));
+  g.add(place(ellipsoid(0.11, 0.1, 0.11, 'main'), m.x - 0.14, m.y + 0.04, m.z - 0.1));
+  g.add(place(lathe([[0, 0], [0.07, 0.03], [0.08, 0.08], [0.05, 0.15], [0.03, 0.2], [0, 0.22]], 'accent', 20), m.x + 0.16, m.y + 0.06, m.z - 0.06, 0, 0, -0.6));
+  const grapes = [[0, 0, 0], [0.06, -0.02, 0.02], [-0.06, -0.02, 0.02], [0.03, -0.08, 0.04], [-0.03, -0.08, 0.04], [0, -0.14, 0.05], [0.0, -0.04, 0.07]];
+  for (const [x, y, z] of grapes) g.add(place(ellipsoid(0.04, 0.04, 0.04, 'dark'), m.x + 0.2 + x, m.y - 0.02 + y, m.z + 0.12 + z));
+  g.add(place(tube([[0, 0, 0], [0.01, 0.04, 0], [0.03, 0.07, 0]], 0.008, 'dark', 8), m.x + 0.02, m.y + 0.19, m.z + 0.08));
+  for (const s of [1, -1]) g.add(place(feather(0.16, 0.05, 0.015, 'main'), m.x + s * 0.06, m.y + 0.14, m.z - 0.02 * s, 0.4 * s, 0, -s * 0.9));
+  return g;
+}
+
+/* --- Charon in his ferry (Toll) --- */
+function buildCharon() {
+  const g = new THREE.Group();
+  // Hull: half an elongated bowl, with prow and stern curling up.
+  const hull = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+  hull.scale(0.62, 0.2, 0.22);
+  g.add(place(part(hull, 'main'), 0, 0.22, 0));
+  const gunwale = part(new THREE.TorusGeometry(1, 0.045, 8, 64), 'accent');
+  gunwale.scale.set(0.62, 0.22, 1);
+  gunwale.rotation.x = Math.PI / 2;
+  gunwale.position.y = 0.22;
+  g.add(gunwale);
+  g.add(tube([[0.56, 0.2, 0], [0.7, 0.32, 0], [0.74, 0.48, 0], [0.66, 0.56, 0]], 0.045, 'main', 24, true));
+  g.add(tube([[-0.56, 0.2, 0], [-0.68, 0.3, 0], [-0.7, 0.4, 0]], 0.04, 'main', 20, true));
+  g.add(place(ellipsoid(0.08, 0.012, 0.18, 'dark'), 0.25, 0.2, 0));
+  // Charon: robed and hooded.
+  g.add(lathe([[0, 0], [0.16, 0], [0.15, 0.1], [0.12, 0.3], [0.1, 0.42], [0.08, 0.5], [0, 0.52]], 'main', 28));
+  g.children[g.children.length - 1].position.set(-0.18, 0.18, 0);
+  const hood = ellipsoid(0.09, 0.11, 0.1, 'main');
+  g.add(place(hood, -0.18, 0.76, 0.0));
+  g.add(place(part(new THREE.ConeGeometry(0.05, 0.14, 12), 'main'), -0.21, 0.88, -0.05, -0.6, 0, 0.2));
+  g.add(place(ellipsoid(0.055, 0.07, 0.04, 'dark'), -0.18, 0.75, 0.07));
+  for (const s of [1, -1]) g.add(place(ellipsoid(0.012, 0.012, 0.012, 'accent'), -0.18 + s * 0.02, 0.77, 0.1));
+  // Arms reaching to the oar.
+  g.add(tube([[-0.24, 0.6, 0.06], [-0.1, 0.55, 0.14], [0.0, 0.58, 0.16]], 0.03, 'main', 12));
+  g.add(tube([[-0.12, 0.6, -0.05], [-0.02, 0.5, 0.12], [0.02, 0.45, 0.17]], 0.028, 'main', 12));
+  // The long oar, blade in the water beside the hull.
+  g.add(tube([[-0.08, 0.9, 0.12], [0.08, 0.4, 0.2], [0.26, -0.02, 0.3]], 0.026, 'accent', 16));
+  g.add(place(ellipsoid(0.04, 0.12, 0.012, 'accent'), 0.3, -0.08, 0.31, 0, 0.6, 0.6));
+  // Lantern on the prow.
+  g.add(place(part(new THREE.CylinderGeometry(0.035, 0.035, 0.07, 12), 'dark'), 0.66, 0.61, 0));
+  g.add(place(part(new THREE.ConeGeometry(0.045, 0.05, 12), 'main'), 0.66, 0.67, 0));
+  // An obol, Charon's fee, on the bench.
+  g.add(place(part(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 20), 'accent'), 0.28, 0.215, 0.04));
+  return g;
+}
+
+/* --- Aegis of Athena with the Gorgon's head (Ward) --- */
+function buildAegis() {
+  const g = new THREE.Group();
+  const shield = lathe([[0, 0.09], [0.2, 0.085], [0.45, 0.06], [0.6, 0.02], [0.66, -0.01], [0.66, -0.04], [0.6, -0.03], [0, -0.03]], 'main', 64);
+  shield.rotation.x = Math.PI / 2;
+  g.add(shield);
+  const rim = part(new THREE.TorusGeometry(0.64, 0.035, 10, 72), 'accent');
+  rim.position.z = 0.01;
+  g.add(rim);
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    g.add(place(ellipsoid(0.022, 0.022, 0.022, 'accent'), Math.cos(a) * 0.56, Math.sin(a) * 0.56, 0.05));
+  }
+  // Gorgoneion: face with bulging eyes, snakes for hair.
+  g.add(place(ellipsoid(0.2, 0.24, 0.1, 'accent'), 0, -0.02, 0.1));
+  for (const s of [1, -1]) {
+    g.add(place(ellipsoid(0.045, 0.035, 0.03, 'main'), s * 0.08, 0.05, 0.18));
+    g.add(place(ellipsoid(0.02, 0.02, 0.02, 'dark'), s * 0.08, 0.05, 0.205));
+    g.add(place(ellipsoid(0.06, 0.015, 0.02, 'main'), s * 0.08, 0.11, 0.175, 0, 0, -s * 0.25));
+  }
+  g.add(place(ellipsoid(0.03, 0.06, 0.03, 'main'), 0, -0.02, 0.19));
+  g.add(place(part(new THREE.TorusGeometry(0.06, 0.015, 8, 20, Math.PI), 'dark'), 0, -0.12, 0.17, 0, 0, Math.PI));
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 + 0.13;
+    const pts = [];
+    for (let k = 0; k <= 5; k++) {
+      const r = 0.2 + k * 0.055;
+      const w = Math.sin(k * 1.6 + i) * 0.12;
+      pts.push([Math.cos(a + w) * r * 1.05, Math.sin(a + w) * r * 1.15 - 0.02, 0.12 - k * 0.012]);
+    }
+    g.add(tube(pts, 0.034, i % 2 ? 'main' : 'accent', 24));
+    const end = pts[pts.length - 1];
+    g.add(place(ellipsoid(0.035, 0.026, 0.03, i % 2 ? 'main' : 'accent'), end[0], end[1], end[2]));
+  }
+  // Back: concentric rings, a boss and the grip.
+  for (const r of [0.22, 0.42, 0.55]) g.add(place(part(new THREE.TorusGeometry(r, 0.02, 8, 56), 'accent'), 0, 0, -0.035));
+  g.add(place(ellipsoid(0.09, 0.09, 0.05, 'accent'), 0, 0, -0.04));
+  g.add(place(part(new THREE.TorusGeometry(0.14, 0.026, 8, 24, Math.PI), 'main'), 0, 0, -0.07, Math.PI / 2, 0, 0));
+  // Athena's owl perched on the rim.
+  const owl = new THREE.Group();
+  owl.add(place(ellipsoid(0.11, 0.15, 0.1, 'main'), 0, 0.15, 0));
+  owl.add(place(ellipsoid(0.08, 0.11, 0.05, 'accent'), 0, 0.13, 0.06));
+  owl.add(place(ellipsoid(0.1, 0.085, 0.09, 'main'), 0, 0.33, 0.01));
+  for (const s of [1, -1]) {
+    owl.add(place(ellipsoid(0.04, 0.04, 0.02, 'accent'), s * 0.045, 0.34, 0.085));
+    owl.add(place(ellipsoid(0.017, 0.017, 0.01, 'dark'), s * 0.045, 0.34, 0.103));
+    owl.add(place(part(new THREE.ConeGeometry(0.025, 0.08, 10), 'main'), s * 0.065, 0.42, 0.0, 0, 0, -s * 0.35));
+    owl.add(place(ellipsoid(0.04, 0.12, 0.08, 'accent'), s * 0.1, 0.14, -0.01, 0, 0, s * 0.15));
+    owl.add(place(ellipsoid(0.03, 0.015, 0.04, 'accent'), s * 0.04, 0.0, 0.05));
+  }
+  owl.add(place(part(new THREE.ConeGeometry(0.018, 0.05, 8), 'accent'), 0, 0.31, 0.1, Math.PI / 2 + 0.6, 0, 0));
+  owl.add(place(ellipsoid(0.05, 0.08, 0.02, 'main'), 0, 0.03, -0.09, -0.6, 0, 0));
+  owl.position.set(0, 0.66, 0);
+  g.add(owl);
+  return g;
+}
+
+const STATUE_BUILDERS = { headstart: buildHermes, rally: buildNike, wind: buildPhoenix, fortune: buildTyche, toll: buildCharon, ward: buildAegis };
+
+// Some figures read better turned before they are set on their base.
+const STATUE_POSE = { headstart: [0, 0, 0], rally: [0, 0, 0], wind: [0, 0, 0], fortune: [0, 0, 0], toll: [0, 0, 0], ward: [-0.12, 0, 0] };
+
+function statuePrototype(type) {
+  if (statueProto.has(type)) return statueProto.get(type);
+  const inner = STATUE_BUILDERS[type]();
+  inner.rotation.set(...STATUE_POSE[type]);
+  // Normalise: centred on x/z, standing on the plinth, fitting a STATUE_HEIGHT cube.
+  inner.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(inner);
+  const size = box.getSize(new THREE.Vector3());
+  const k = (STATUE_HEIGHT - 0.14) / Math.max(size.x, size.y, size.z);
+  const c = box.getCenter(new THREE.Vector3());
+  const PLINTH = 0.13;
+  inner.position.set(-c.x * k, -box.min.y * k + PLINTH - 0.01, -c.z * k);
+  inner.scale.setScalar(k);
+  const outer = new THREE.Group();
+  outer.add(inner);
+  // Cast base, oval to suit the figure's footprint (like a classic board-game piece).
+  const rx = Math.max(0.32, Math.min(0.85, size.x * k * 0.5 * 0.92));
+  const rz = Math.max(0.32, Math.min(0.6, size.z * k * 0.5 * 1.1));
+  const plinth = lathe([[0, 0], [0.92, 0], [1, 0.02 / 0.5], [1, 0.06 / 0.5], [0.95, 0.09 / 0.5], [0.9, 0.11 / 0.5], [0.86, 0.13 / 0.5], [0, 0.13 / 0.5]], 'main', 48);
+  plinth.scale.set(rx, 0.5, rz);
+  outer.add(plinth);
+  const bead = part(new THREE.TorusGeometry(1, 0.035, 8, 64), 'accent');
+  bead.scale.set(rx * 0.97, rz * 0.97, 1);
+  bead.rotation.x = Math.PI / 2;
+  bead.position.y = 0.075;
+  outer.add(bead);
+  statueProto.set(type, outer);
+  return outer;
+}
+
+function makeStatue(type, tier) {
+  const s = statuePrototype(type).clone(true);
+  s.traverse(o => { if (o.isMesh) o.material = statueMaterial(tier, o.userData.slot || 'main'); });
+  return s;
+}
+
+/* Offscreen renderer for card images and turntables */
+let statueStage = null;
+function getStatueStage() {
+  if (statueStage) return statueStage;
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r.setPixelRatio(1);
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMappingExposure = 1.15;
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  const sc = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(r);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), new THREE.MeshBasicMaterial({ color: 0x5a4030, side: THREE.BackSide })));
+  const panel = (color, w, h, pos) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.position.copy(pos); m.lookAt(0, 0, 0); env.add(m); };
+  panel(0xfff0d8, 8, 6, new THREE.Vector3(-6, 7, 6));
+  panel(0xffb060, 5, 5, new THREE.Vector3(8, 2, 2));
+  panel(0xffd9a8, 5, 6, new THREE.Vector3(2, 3, -9));
+  panel(0xfff4e0, 10, 4, new THREE.Vector3(0, 9, 2));
+  sc.environment = pm.fromScene(env, 0.03).texture;
+  pm.dispose();
+  sc.add(new THREE.HemisphereLight(0xfff2dd, 0x3a2414, 0.9));
+  const key = new THREE.DirectionalLight(0xfff0dc, 2.2);
+  key.position.set(-3, 5, 4);
+  sc.add(key);
+  const rimL = new THREE.DirectionalLight(0xffc080, 1.2);
+  rimL.position.set(4, 2, -3);
+  sc.add(rimL);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+  cam.position.set(0, 1.2, 3.25);
+  cam.lookAt(0, 0.78, 0);
+  const holder = new THREE.Group();
+  sc.add(holder);
+  statueStage = { r, sc, cam, holder, current: '' };
+  return statueStage;
+}
+
+function renderStatue(type, tier, angle, size) {
+  const st = getStatueStage();
+  const key = `${type}-${tier}`;
+  if (st.current !== key) {
+    st.holder.clear();
+    st.holder.add(makeStatue(type, tier));
+    st.current = key;
+  }
+  if (st.r.domElement.width !== size) st.r.setSize(size, size, false);
+  st.holder.rotation.y = angle;
+  st.r.render(st.sc, st.cam);
+  return st.r.domElement;
+}
+
+const tokenUrlCache = new Map();
+function tokenImageUrl(type, tier) {
+  const key = `${type}-${tier}`;
+  if (!tokenUrlCache.has(key)) {
+    const src = renderStatue(type, tier, -0.55, 192);
+    const [cnv, ctx] = canvas2d(192);
+    ctx.drawImage(src, 0, 0);
+    tokenUrlCache.set(key, cnv.toDataURL());
+  }
+  return tokenUrlCache.get(key);
+}
+
+// Live turntables on the choice cards.
+const turntables = [];
+function registerTurntables(root) {
+  turntables.length = 0;
+  root.querySelectorAll('canvas.statue-view').forEach((c, i) => {
+    turntables.push({ canvas: c, type: c.dataset.type, tier: Number(c.dataset.tier), phase: i * 0.9 });
+  });
+}
+function updateTurntables(t) {
+  if (!turntables.length || !pickModal.classList.contains('show')) return;
+  for (const tt of turntables) {
+    if (!tt.canvas.isConnected) continue;
+    const size = tt.canvas.width;
+    const src = renderStatue(tt.type, tt.tier, t * 0.7 + tt.phase, size);
+    const ctx = tt.canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(src, 0, 0);
+  }
+}
+
+/* Statuettes on the table */
+const tokenMeshes = { mine: null, theirs: null };
+function tokenSpot(which) {
+  return which === 'mine' ? new THREE.Vector3(5.95, -0.12, 0.2) : new THREE.Vector3(-5.95, -0.12, 0.2);
+}
+
+function refreshTokens3D() {
+  if (!game) return;
+  for (const which of ['mine', 'theirs']) {
+    const seat = which === 'mine' ? mySeat : other(mySeat);
+    const tok = game.tokens && game.tokens[seat];
+    const key = tok ? `${tok.type}-${tok.tier}` : '';
+    let mesh = tokenMeshes[which];
+    if (mesh && mesh.userData.key !== key) { scene.remove(mesh); mesh = tokenMeshes[which] = null; }
+    if (!mesh && tok) {
+      mesh = makeStatue(tok.type, tok.tier);
+      mesh.scale.setScalar(0.85);
+      const spot = tokenSpot(which);
+      mesh.position.set(spot.x, spot.y + 3.5, spot.z);
+      mesh.userData = { key, rest: spot, vy: 0, tip: 0, spin: which === 'mine' ? -0.6 : 0.6 };
+      scene.add(mesh);
+      tokenMeshes[which] = mesh;
+    }
+    if (mesh) mesh.userData.tipTarget = tok && (tok.spent || tok.cancelled) ? 1 : 0;
+  }
+}
+
+function clearTokens3D() {
+  for (const which of ['mine', 'theirs']) {
+    if (tokenMeshes[which]) scene.remove(tokenMeshes[which]);
+    tokenMeshes[which] = null;
+  }
+}
+
+function updateTokens3D(dt) {
+  for (const which of ['mine', 'theirs']) {
+    const m = tokenMeshes[which];
+    if (!m) continue;
+    const u = m.userData;
+    if (m.position.y > u.rest.y + 0.001 || u.vy > 0) {
+      u.vy -= 20 * dt;
+      m.position.y += u.vy * dt;
+      if (m.position.y <= u.rest.y) {
+        m.position.y = u.rest.y;
+        if (u.vy < -3) { playCoinClink(); u.vy = -u.vy * 0.22; } else u.vy = 0;
+      }
+    }
+    u.tip += ((u.tipTarget || 0) - u.tip) * Math.min(1, dt * 3);
+    // Standing statuettes turn slowly; a spent one topples onto its side.
+    if (u.tip < 0.5) u.spin += dt * 0.35 * (1 - u.tip * 2);
+    m.rotation.set(0, u.spin, u.tip * Math.PI / 2 * (which === 'mine' ? -1 : 1), 'YXZ');
+    m.position.y = Math.max(m.position.y, u.rest.y + u.tip * 0.35);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Dice motion (local visuals — run on every screen)                   */
 /* ------------------------------------------------------------------ */
 
@@ -54815,6 +55537,29 @@ function localThrow({ indices, values, ends, yaws, owner }) {
   return Promise.all(promises).then(() => { animating--; updateUI(); });
 }
 
+function localReroll({ idx, value }) {
+  const die = dice[idx];
+  die.value = value;
+  animating++;
+  updateUI();
+  playRattle();
+  // Hop and tumble in place, landing on the new face.
+  const endQuat = restQuat(value, rand(-0.6, 0.6));
+  const axis = new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
+  const spin = Math.PI * 2 * rand(1.6, 2.4);
+  const startPos = die.mesh.position.clone();
+  const endPos = die.rest.clone();
+  return new Promise(resolve => {
+    die.anim = {
+      type: 'throw', t: 0, delay: 0, duration: 0.9,
+      startPos: startPos.setY(DIE_REST_Y + 1.6), endPos, startQuat: new THREE.Quaternion().setFromAxisAngle(axis, spin).multiply(endQuat),
+      endQuat, axis, spin, bounce: 0.5,
+      contacts: [{ p: 0.3, v: 0.8 }, { p: 0.56, v: 0.3 }],
+      resolve
+    };
+  }).then(() => { animating--; updateUI(); });
+}
+
 function moveDie(die, endPos, endQuat, duration = 0.5, hop = 0.7, delay = 0) {
   return new Promise(resolve => {
     die.anim = {
@@ -54847,6 +55592,8 @@ function localReset() {
   popupLayer.innerHTML = '';
   popups.length = 0;
   logEl.innerHTML = '';
+  fortuneMode = false;
+  clearTokens3D();
   rebuildCoins('player', 0, false);
   rebuildCoins('ai', 0, false);
   const start = startLineup();
@@ -54873,6 +55620,7 @@ function runFx(op, a) {
   switch (op) {
     case 'reset': localReset(); return null;
     case 'throw': return localThrow(a);
+    case 'reroll': return localReroll(a);
     case 'hold': return localHold(a);
     case 'popup': spawnPopup(centroid(a.indices), `+${fmt(a.points)}`, isMe(a.seat) ? 'gain' : 'ai'); playImpact(0.2); return null;
     case 'log': addLog(a.seat ? (isMe(a.seat) ? 'player' : 'ai') : 'system', pick(a.seat, a.you, a.them)); return null;
@@ -54880,10 +55628,16 @@ function runFx(op, a) {
     case 'stamp':
       if (a.kind === 'bust') showBustStamp(a.word); else showStamp(a.word, a.kind);
       return null;
+    case 'tokenFx': {
+      const pos = tokenSpot(isMe(a.seat) ? 'mine' : 'theirs');
+      spawnPopup(pos.clone().setY(0.4), a.text, a.bad ? 'bad' : (isMe(a.seat) ? 'gain' : 'ai'));
+      playCoinClink();
+      return null;
+    }
     case 'coins':
       rebuildCoins('player', a.totals.player);
       rebuildCoins('ai', a.totals.ai);
-      pulse(a.seat && isMe(a.seat) ? playerRow : aiRow);
+      if (a.seat) pulse(isMe(a.seat) ? playerRow : aiRow);
       return null;
     case 'win': showWinner(a.seat, a.totals); return null;
     default: return null;
@@ -54897,8 +55651,10 @@ function emit(op, a = {}) {
 
 function snapshot() {
   return {
-    current: game.current, phase: game.phase, totals: game.totals, turnScore: game.turnScore,
+    stage: game.stage, current: game.current, phase: game.phase, totals: game.totals, turnScore: game.turnScore,
     active: game.active, selected: [...game.selected], winner: game.winner,
+    draws: game.draws, tokens: game.tokens, prompt: game.prompt,
+    picked: { player: game.picks.player !== null, ai: game.picks.ai !== null },
     values: dice.map(d => d.value), held: dice.map(d => d.held)
   };
 }
@@ -54910,30 +55666,40 @@ function sync() {
 }
 
 function applyState(s) {
-  game.current = s.current;
-  game.phase = s.phase;
-  game.totals = s.totals;
-  game.turnScore = s.turnScore;
-  game.active = s.active;
-  game.selected = new Set(s.selected);
-  game.winner = s.winner;
+  Object.assign(game, {
+    stage: s.stage, current: s.current, phase: s.phase, totals: s.totals, turnScore: s.turnScore,
+    active: s.active, selected: new Set(s.selected), winner: s.winner,
+    draws: s.draws, tokens: s.tokens, prompt: s.prompt, picked: s.picked
+  });
   dice.forEach((d, i) => { if (!d.anim) { d.value = s.values[i]; } d.held = s.held[i]; });
   updateUI();
+}
+
+function hasPicked(seat) {
+  if (game.picked) return !!game.picked[seat];
+  return game.picks && game.picks[seat] !== null;
 }
 
 /* ------------------------------------------------------------------ */
 /* Game engine (runs on the host, or locally against the computer)     */
 /* ------------------------------------------------------------------ */
 
+const allDice = () => Array.from({ length: DICE_COUNT }, (_, i) => i);
+
 function freshGame(first = 'player') {
   return {
+    stage: 'draw',
     current: first,
     phase: 'ready',
     totals: { player: 0, ai: 0 },
     turnScore: 0,
-    active: Array.from({ length: DICE_COUNT }, (_, i) => i),
+    active: allDice(),
     selected: new Set(),
-    winner: null
+    winner: null,
+    draws: { player: null, ai: null },
+    picks: { player: null, ai: null },
+    tokens: { player: null, ai: null },
+    prompt: null
   };
 }
 
@@ -54944,11 +55710,13 @@ function seatName(seat) {
 function newGame() {
   if (mode === 'online' && role === 'guest') { netSend({ t: 'act', a: 'newgame' }); return; }
   gameToken++;
+  if (tollResolver) { tollResolver(false); tollResolver = null; }
   const first = mode === 'online' ? (Math.random() < 0.5 ? 'player' : 'ai') : 'player';
   game = freshGame(first);
+  aiDrawTarget = null;
   emit('reset');
-  emit('log', { seat: null, you: 'A new match begins. First to 5,000 takes the purse.' });
-  emit('banner', { seat: first, you: 'You throw first. Roll all six dice.', them: `${seatName(first)} throws first.` });
+  emit('log', { seat: null, you: 'A new match begins. First, each player takes one turn to draw for a token.' });
+  emit('banner', { seat: first, you: 'Token draw: take one turn. The more you bank, the better the metal.', them: `${seatName(first)} draws for a token first.` });
   sync();
   if (controllerOf(game.current) === 'ai') aiTurn();
 }
@@ -54959,7 +55727,7 @@ function controllerOf(seat) {
 }
 
 async function doRoll(seat) {
-  if (!game || game.current !== seat || game.phase !== 'ready' || game.winner) return;
+  if (!game || game.current !== seat || game.phase !== 'ready' || game.winner || game.stage === 'pick') return;
   const token = gameToken;
   game.phase = 'busy';
   game.selected.clear();
@@ -54973,26 +55741,74 @@ async function doRoll(seat) {
   emit('log', { seat, you: `You roll ${values.join(', ')}.`, them: `${seatName(seat)} rolls ${values.join(', ')}.` });
   await emit('throw', { indices: [...game.active], values, ends, yaws, owner: seat });
   if (token !== gameToken) return;
+  await afterRoll(seat, token);
+}
 
+// Shared by a fresh roll and a Fortune re-roll.
+async function afterRoll(seat, token) {
+  const values = game.active.map(i => dice[i].value);
   if (!hasScoringSubset(values)) {
-    const lost = game.turnScore;
-    game.turnScore = 0;
+    const tok = game.tokens[seat];
+    if (game.stage === 'match' && tok && tok.type === 'fortune' && tokenUsable(tok)) {
+      game.phase = 'bustPending';
+      emit('banner', {
+        seat,
+        you: `Nothing scores! Re-roll a die with Fortune (${tok.uses} left) or take the bust.`,
+        them: `${seatName(seat)} rolled nothing… and reaches for Fortune.`
+      });
+      sync();
+      if (controllerOf(seat) === 'ai') {
+        await sleep(1000);
+        if (token !== gameToken) return;
+        await doFortune(seat, game.active[Math.floor(Math.random() * game.active.length)]);
+      }
+      return;
+    }
+    await finalizeBust(seat);
+    return;
+  }
+  game.phase = 'selecting';
+  emit('banner', game.stage === 'draw'
+    ? { seat, you: 'Draw turn: keep scoring dice, then bank to take your token — or push for a better metal.', them: `${seatName(seat)} is drawing…` }
+    : { seat, you: 'Tap scoring dice to keep them, then roll on or bank.', them: `${seatName(seat)} is choosing dice…` });
+  sync();
+}
+
+async function finalizeBust(seat) {
+  if (!game || game.current !== seat) return;
+  const token = gameToken;
+  const lost = game.turnScore;
+  const tok = game.tokens[seat];
+  let saved = 0;
+  if (game.stage === 'match' && tok && tok.type === 'wind' && tok.armed && tokenUsable(tok) && lost > 0) {
+    saved = round5(lost * tokenVal(tok) / 100);
+    tok.uses = 0; tok.spent = true; tok.armed = false;
+    game.totals[seat] += saved;
+  }
+  game.turnScore = 0;
+  game.phase = 'busy';
+  if (game.stage === 'draw') {
+    emit('log', { seat, you: 'Bust! No token for you this match.', them: `${seatName(seat)} busts the draw — no token.` });
+  } else {
     emit('log', {
       seat,
       you: `Bust! Nothing to keep${lost ? ` — ${fmt(lost)} lost` : ''}.`,
       them: `${seatName(seat)} busts${lost ? ` and loses ${fmt(lost)}` : ''}.`
     });
-    emit('banner', { seat, you: 'Bust! Your turn ends.', them: `${seatName(seat)} busts!` });
-    emit('stamp', { kind: 'bust', word: BUST_WORDS[Math.floor(Math.random() * BUST_WORDS.length)] });
-    sync();
-    await sleep(1800);
-    if (token !== gameToken) return;
-    passTurn();
-    return;
   }
-  game.phase = 'selecting';
-  emit('banner', { seat, you: 'Tap scoring dice to keep them, then roll on or bank.', them: `${seatName(seat)} is choosing dice…` });
+  emit('banner', { seat, you: 'Bust! Your turn ends.', them: `${seatName(seat)} busts!` });
+  emit('stamp', { kind: 'bust', word: BUST_WORDS[Math.floor(Math.random() * BUST_WORDS.length)] });
+  if (saved) {
+    emit('log', { seat, you: `Second Wind saves ${fmt(saved)} of it.`, them: `Their Second Wind saves ${fmt(saved)}.` });
+    emit('tokenFx', { seat, text: `Second Wind +${fmt(saved)}` });
+    emit('coins', { totals: game.totals, seat });
+  }
   sync();
+  await sleep(1800);
+  if (token !== gameToken) return;
+  if (game.stage === 'draw') { await recordDraw(seat, 0); return; }
+  if (game.totals[seat] >= WIN_SCORE) { finish(seat); return; }
+  passTurn();
 }
 
 function doToggle(seat, idx) {
@@ -55000,6 +55816,36 @@ function doToggle(seat, idx) {
   if (game.selected.has(idx)) game.selected.delete(idx);
   else game.selected.add(idx);
   sync();
+}
+
+async function doFortune(seat, idx) {
+  const tok = game && game.tokens[seat];
+  if (!game || game.stage !== 'match' || game.current !== seat || !['selecting', 'bustPending'].includes(game.phase)) return;
+  if (!tok || tok.type !== 'fortune' || !tokenUsable(tok) || !game.active.includes(idx)) return;
+  const token = gameToken;
+  const old = dice[idx].value;
+  game.phase = 'busy';
+  tok.uses--;
+  if (tok.uses <= 0) tok.spent = true;
+  game.selected.clear();
+  const value = rollD6();
+  sync();
+  emit('tokenFx', { seat, text: 'Fortune!' });
+  await emit('reroll', { idx, value });
+  if (token !== gameToken) return;
+  emit('log', { seat, you: `Fortune: your ${old} becomes a ${value}.`, them: `${seatName(seat)} uses Fortune: a ${old} becomes a ${value}.` });
+  await afterRoll(seat, token);
+}
+
+function doTokenToggle(seat) {
+  const tok = game && game.tokens[seat];
+  if (!tok || !tokenUsable(tok) || game.stage !== 'match' || game.winner) return;
+  if (tok.type === 'wind') { tok.armed = !tok.armed; sync(); return; }
+  if (tok.type === 'rally' && game.current === seat && ['ready', 'selecting'].includes(game.phase)) {
+    tok.armed = !tok.armed;
+    if (tok.armed) emit('log', { seat, you: `Rally armed: your next banked turn gets +${tokenVal(tok)}%.`, them: `${seatName(seat)} arms a Rally (+${tokenVal(tok)}% on their next bank).` });
+    sync();
+  }
 }
 
 // Keep the selected dice. bank=true ends the turn; otherwise the same player rolls the rest.
@@ -55027,7 +55873,21 @@ async function doKeep(seat, bank) {
   if (token !== gameToken) return;
 
   if (bank) {
-    const banked = game.turnScore;
+    if (game.stage === 'draw') {
+      const drawn = game.turnScore;
+      game.turnScore = 0;
+      await recordDraw(seat, drawn);
+      return;
+    }
+    let banked = game.turnScore;
+    const tok = game.tokens[seat];
+    if (tok && tok.type === 'rally' && tok.armed && tokenUsable(tok)) {
+      const bonus = round5(banked * tokenVal(tok) / 100);
+      banked += bonus;
+      tok.uses = 0; tok.spent = true; tok.armed = false;
+      emit('tokenFx', { seat, text: `Rally +${fmt(bonus)}` });
+      emit('log', { seat, you: `Rally adds ${fmt(bonus)}.`, them: `Their Rally adds ${fmt(bonus)}.` });
+    }
     game.totals[seat] += banked;
     game.turnScore = 0;
     emit('log', {
@@ -55038,6 +55898,25 @@ async function doKeep(seat, bank) {
     emit('banner', { seat, you: `You banked ${fmt(banked)}.`, them: `${seatName(seat)} banks ${fmt(banked)}.` });
     emit('coins', { totals: game.totals, seat });
     sync();
+
+    const opp = other(seat);
+    const toll = game.tokens[opp];
+    if (toll && toll.type === 'toll' && tokenUsable(toll) && banked > 0) {
+      const cut = round5(banked * tokenVal(toll) / 100);
+      const use = await askToll(opp, seat, banked, cut);
+      if (token !== gameToken) return;
+      if (use) {
+        toll.uses = 0; toll.spent = true;
+        game.totals[seat] -= cut;
+        emit('tokenFx', { seat: opp, text: `Toll −${fmt(cut)}`, bad: true });
+        emit('log', { seat: opp, you: `Your Toll takes ${fmt(cut)} from their turn.`, them: `${seatName(opp)}’s Toll takes ${fmt(cut)} from your turn.` });
+        emit('coins', { totals: game.totals, seat });
+      }
+      game.prompt = null;
+      game.phase = 'busy';
+      sync();
+    }
+
     if (game.totals[seat] >= WIN_SCORE) { finish(seat); return; }
     await sleep(1000);
     if (token !== gameToken) return;
@@ -55046,7 +55925,7 @@ async function doKeep(seat, bank) {
   }
 
   if (game.active.length === 0) {
-    game.active = Array.from({ length: DICE_COUNT }, (_, i) => i);
+    game.active = allDice();
     dice.forEach(d => { d.held = false; });
     emit('log', { seat, you: 'Hot dice! All six scored — you take them all back.', them: `Hot dice — ${seatName(seat).toLowerCase()} takes all six back.` });
     emit('stamp', { kind: 'hot', word: 'HOT DICE!' });
@@ -55058,6 +55937,26 @@ async function doKeep(seat, bank) {
   sync();
 }
 
+let tollResolver = null;
+async function askToll(owner, target, banked, cut) {
+  game.phase = 'tollPending';
+  game.prompt = { kind: 'toll', seat: owner, banked, cut };
+  emit('banner', { seat: owner, you: `Use your Toll? It would cut their ${fmt(banked)} by ${fmt(cut)}.`, them: `${seatName(owner)} is weighing their Toll…` });
+  sync();
+  if (controllerOf(owner) === 'ai') {
+    await sleep(1300);
+    return banked >= 500 || game.totals[target] >= WIN_SCORE;
+  }
+  return new Promise(resolve => { tollResolver = resolve; });
+}
+
+function answerToll(seat, use) {
+  if (!game || game.phase !== 'tollPending' || !game.prompt || game.prompt.seat !== seat || !tollResolver) return;
+  const r = tollResolver;
+  tollResolver = null;
+  r(!!use);
+}
+
 async function keepAndRollOn(seat) {
   await doKeep(seat, false);
   if (game.current === seat && game.phase === 'ready' && !game.winner) {
@@ -55066,18 +55965,124 @@ async function keepAndRollOn(seat) {
   }
 }
 
+function resetTurnDice() {
+  game.turnScore = 0;
+  game.active = allDice();
+  game.selected.clear();
+  dice.forEach(d => { d.held = false; });
+}
+
 function passTurn() {
   if (game.winner) return;
   const next = other(game.current);
   game.current = next;
   game.phase = 'ready';
-  game.turnScore = 0;
-  game.active = Array.from({ length: DICE_COUNT }, (_, i) => i);
-  game.selected.clear();
-  dice.forEach(d => { d.held = false; });
+  resetTurnDice();
   emit('banner', { seat: next, you: 'Your throw. Roll all six dice.', them: `${seatName(next)} takes the dice.` });
   sync();
   if (controllerOf(next) === 'ai') aiTurn();
+}
+
+/* Token draw and pick */
+
+async function recordDraw(seat, score) {
+  const token = gameToken;
+  game.draws[seat] = score;
+  const tier = tierFor(score);
+  if (tier >= 0) {
+    emit('log', { seat, you: `You draw ${fmt(score)}: ${aMetal(tier)} token.`, them: `${seatName(seat)} draws ${fmt(score)}: ${aMetal(tier)} token.` });
+    emit('stamp', { kind: 'hot', word: `${METALS[tier]}!` });
+  }
+  game.phase = 'busy';
+  sync();
+  await sleep(1500);
+  if (token !== gameToken) return;
+  resetTurnDice();
+  const opp = other(seat);
+  if (game.draws[opp] === null) {
+    game.current = opp;
+    game.phase = 'ready';
+    emit('banner', { seat: opp, you: 'Your token draw: take one turn.', them: `${seatName(opp)} draws for a token.` });
+    sync();
+    if (controllerOf(opp) === 'ai') aiTurn();
+    return;
+  }
+  game.stage = 'pick';
+  game.phase = 'pick';
+  for (const s of ['player', 'ai']) if (tierFor(game.draws[s]) < 0) game.picks[s] = 'none';
+  emit('banner', { seat: null, you: 'Choose your token.' });
+  sync();
+  if (mode === 'ai' && game.picks.ai === null) {
+    await sleep(600);
+    game.picks.ai = aiPickToken();
+    sync();
+  }
+  maybeResolvePicks();
+}
+
+function doPick(seat, type) {
+  if (!game || game.stage !== 'pick' || game.picks[seat] !== null) return;
+  if (!TOKEN_TYPES.includes(type) || tierFor(game.draws[seat]) < 0) return;
+  game.picks[seat] = type;
+  sync();
+  maybeResolvePicks();
+}
+
+function maybeResolvePicks() {
+  if (game.stage === 'pick' && game.picks.player !== null && game.picks.ai !== null) resolvePicks();
+}
+
+async function resolvePicks() {
+  const token = gameToken;
+  game.stage = 'reveal';
+  const t = game.tokens;
+  for (const s of ['player', 'ai']) {
+    t[s] = game.picks[s] === 'none' ? null : makeToken(game.picks[s], tierFor(game.draws[s]));
+  }
+  for (const s of ['player', 'ai']) {
+    const tok = t[s];
+    if (tok) emit('log', { seat: s, you: `You take ${aMetal(tok.tier)} ${TOKEN_INFO[tok.type].name}.`, them: `${seatName(s)} takes ${aMetal(tok.tier)} ${TOKEN_INFO[tok.type].name}.` });
+    else emit('log', { seat: s, you: 'You play without a token.', them: `${seatName(s)} plays without a token.` });
+  }
+  // Ward resolves against the original metals.
+  const orig = { player: t.player && t.player.tier, ai: t.ai && t.ai.tier };
+  for (const s of ['player', 'ai']) {
+    const w = t[s], target = t[other(s)];
+    if (!w || w.type !== 'ward') continue;
+    w.spent = true;
+    if (!target || target.type === 'ward') continue;
+    if (orig[s] >= orig[other(s)]) {
+      target.cancelled = true;
+      emit('log', { seat: s, you: `Your Aegis blocks their ${TOKEN_INFO[target.type].name}.`, them: `${seatName(s)}’s Aegis blocks your ${TOKEN_INFO[target.type].name}.` });
+    } else {
+      target.tier = Math.max(0, target.tier - 2);
+      if (target.type === 'fortune') target.uses = TOKEN_INFO.fortune.vals[target.tier];
+      emit('log', { seat: s, you: `Your Aegis knocks their token down to ${METALS[target.tier]}.`, them: `${seatName(s)}’s Aegis knocks your token down to ${METALS[target.tier]}.` });
+    }
+  }
+  for (const s of ['player', 'ai']) {
+    const tok = t[s];
+    if (tok && tok.type === 'headstart' && !tok.cancelled) {
+      game.totals[s] += tokenVal(tok);
+      tok.spent = true;
+      emit('log', { seat: s, you: `Head Start: you begin with ${fmt(tokenVal(tok))}.`, them: `${seatName(s)} begins with ${fmt(tokenVal(tok))} (Head Start).` });
+    }
+  }
+  const dp = game.draws.player, da = game.draws.ai;
+  const first = dp === da ? (Math.random() < 0.5 ? 'player' : 'ai') : (dp < da ? 'player' : 'ai');
+  game.phase = 'busy';
+  sync();
+  emit('coins', { totals: game.totals });
+  emit('stamp', { kind: 'hot', word: 'Tokens revealed' });
+  await sleep(2000);
+  if (token !== gameToken) return;
+  game.stage = 'match';
+  game.current = first;
+  game.phase = 'ready';
+  resetTurnDice();
+  emit('banner', { seat: first, you: 'The match begins — your throw (lower draw goes first).', them: `The match begins — ${seatName(first).toLowerCase()} throws first.` });
+  sync();
+  if (controllerOf(first) === 'ai') aiTurn();
 }
 
 function finish(seat) {
@@ -55093,12 +56098,29 @@ function finish(seat) {
   sync();
 }
 
+/* Computer opponent */
+
+let aiDrawTarget = null;
+
+function aiPickToken() {
+  const mine = tierFor(game.draws.ai);
+  if (mine < 0) return 'none';
+  const theirs = tierFor(game.draws.player);
+  const weights = { headstart: 2, rally: 2, wind: 2, fortune: 2, toll: 2, ward: theirs < 0 ? 0 : (theirs > mine ? 3 : 1) };
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (const [k, w] of Object.entries(weights)) { r -= w; if (r <= 0) return k; }
+  return 'headstart';
+}
+
 async function aiTurn() {
   const token = gameToken;
   await sleep(700);
-  while (token === gameToken && game.current === 'ai' && !game.winner) {
+  if (game.stage === 'draw' && aiDrawTarget === null) aiDrawTarget = [250, 400, 400, 550, 550, 750][Math.floor(Math.random() * 6)];
+  while (token === gameToken && game.current === 'ai' && !game.winner && (game.stage === 'draw' || game.stage === 'match')) {
+    const stage = game.stage;
     await doRoll('ai');
-    if (token !== gameToken || game.current !== 'ai' || game.phase !== 'selecting') return;
+    if (token !== gameToken || game.current !== 'ai' || game.phase !== 'selecting' || game.stage !== stage) return;
 
     const values = game.active.map(i => dice[i].value);
     const options = getScoringOptions(values);
@@ -55111,9 +56133,20 @@ async function aiTurn() {
     if (token !== gameToken) return;
 
     const turnAfter = game.turnScore + choice.points;
-    const diceLeft = values.length - chosen.length === 0 ? DICE_COUNT : values.length - chosen.length;
-    const behind = game.totals.ai < game.totals.player;
-    const bank = game.totals.ai + turnAfter >= WIN_SCORE || turnAfter >= (behind ? 900 : 650) || (turnAfter >= 400 && diceLeft <= 2);
+    const left = values.length - chosen.length;
+    const diceLeft = left === 0 ? DICE_COUNT : left;
+    let bank;
+    if (stage === 'draw') {
+      bank = turnAfter >= aiDrawTarget || (diceLeft <= 2 && turnAfter >= 150);
+    } else {
+      const behind = game.totals.ai < game.totals.player;
+      bank = game.totals.ai + turnAfter >= WIN_SCORE || turnAfter >= (behind ? 900 : 650) || (turnAfter >= 400 && diceLeft <= 2);
+      const tok = game.tokens.ai;
+      if (bank && tok && tok.type === 'rally' && tokenUsable(tok) && !tok.armed && turnAfter >= 500) {
+        tok.armed = true;
+        emit('log', { seat: 'ai', you: '', them: `${seatName('ai')} arms a Rally (+${tokenVal(tok)}%).` });
+      }
+    }
     await doKeep('ai', bank);
     if (bank || token !== gameToken) return;
     await sleep(400);
@@ -55138,41 +56171,67 @@ function chooseAiOption(values, options) {
 /* Local player actions (routed to the host when we are the guest)     */
 /* ------------------------------------------------------------------ */
 
+let fortuneMode = false;
+
 function act(a, extra = {}) {
   if (!game) return;
   if (mode === 'online' && role === 'guest') {
     netSend({ t: 'act', a, ...extra });
     return;
   }
-  if (a === 'roll') doRoll(mySeat);
-  else if (a === 'toggle') doToggle(mySeat, extra.idx);
-  else if (a === 'continue') keepAndRollOn(mySeat);
-  else if (a === 'bank') doKeep(mySeat, true);
+  runAct(mySeat, { a, ...extra });
+}
+
+function runAct(seat, msg) {
+  switch (msg.a) {
+    case 'roll': doRoll(seat); break;
+    case 'toggle': doToggle(seat, msg.idx); break;
+    case 'continue': keepAndRollOn(seat); break;
+    case 'bank': doKeep(seat, true); break;
+    case 'pick': doPick(seat, msg.type); break;
+    case 'token': doTokenToggle(seat); break;
+    case 'fortune': doFortune(seat, msg.idx); break;
+    case 'acceptBust': if (game.phase === 'bustPending' && game.current === seat) finalizeBust(seat); break;
+    case 'toll': answerToll(seat, msg.use); break;
+    default: break;
+  }
 }
 
 function hostHandleRemote(msg) {
   const seat = other(mySeat);
-  if (msg.a === 'roll') doRoll(seat);
-  else if (msg.a === 'toggle') doToggle(seat, msg.idx);
-  else if (msg.a === 'continue') keepAndRollOn(seat);
-  else if (msg.a === 'bank') doKeep(seat, true);
-  else if (msg.a === 'newgame') {
-    if (game.winner || confirmQuiet()) {
-      newGame();
-      emit('log', { seat: seat, you: 'You started a new match.', them: 'Your opponent started a new match.' });
-    }
+  if (msg.a === 'newgame') {
+    newGame();
+    emit('log', { seat, you: 'You started a new match.', them: 'Your opponent started a new match.' });
+    return;
   }
+  runAct(seat, msg);
 }
 
-function confirmQuiet() { return true; }
-
 function canRoll() {
-  return mode !== 'offline' && !!game && game.current === mySeat && game.phase === 'ready' && !animating && !game.winner;
+  return mode !== 'offline' && !!game && (game.stage === 'draw' || game.stage === 'match') && game.current === mySeat && game.phase === 'ready' && !animating && !game.winner;
 }
 
 function canKeep() {
-  if (mode === 'offline' || !game || game.current !== mySeat || game.phase !== 'selecting' || animating || game.winner) return false;
+  if (mode === 'offline' || !game || game.current !== mySeat || game.phase !== 'selecting' || animating || game.winner || fortuneMode) return false;
   return scoreSelection(selectedActiveValues()).valid;
+}
+
+function myToken() { return game && game.tokens ? game.tokens[mySeat] : null; }
+
+function canFortune() {
+  const tok = myToken();
+  return !!tok && tok.type === 'fortune' && tokenUsable(tok) && game.stage === 'match' && game.current === mySeat &&
+    ['selecting', 'bustPending'].includes(game.phase) && !animating && !game.winner && mode !== 'offline';
+}
+
+function onMyTokenClick() {
+  const tok = myToken();
+  if (!tok || !tokenUsable(tok)) return;
+  if (tok.type === 'fortune') {
+    if (canFortune()) { fortuneMode = !fortuneMode; updateUI(); }
+    return;
+  }
+  if (tok.type === 'rally' || tok.type === 'wind') act('token');
 }
 
 /* ------------------------------------------------------------------ */
@@ -55180,6 +56239,7 @@ function canKeep() {
 /* ------------------------------------------------------------------ */
 
 function isSelectable(idx) {
+  if (fortuneMode) return canFortune() && game.active.includes(idx);
   return mode !== 'offline' && !!game && game.current === mySeat && game.phase === 'selecting' && !animating && !game.winner && game.active.includes(idx);
 }
 
@@ -55214,15 +56274,19 @@ function onPointerMove(event) {
 function onPointerDown(event) {
   const idx = pickDie(event, true);
   if (idx < 0 || !isSelectable(idx)) return;
-  // Toggle immediately for responsiveness; the host's state confirms it.
-  if (game.selected.has(idx)) game.selected.delete(idx);
-  else game.selected.add(idx);
+  if (fortuneMode) {
+    fortuneMode = false;
+    act('fortune', { idx });
+    updateUI();
+    return;
+  }
   playImpact(0.15);
-  updateUI();
-  if (mode === 'online' && role === 'guest') netSend({ t: 'act', a: 'toggle', idx });
-  else {
-    // Undo the optimistic toggle and let the engine apply it properly.
+  if (mode === 'online' && role === 'guest') {
+    // Toggle immediately for responsiveness; the host's state confirms it.
     if (game.selected.has(idx)) game.selected.delete(idx); else game.selected.add(idx);
+    updateUI();
+    netSend({ t: 'act', a: 'toggle', idx });
+  } else {
     doToggle(mySeat, idx);
   }
 }
@@ -55238,12 +56302,110 @@ function onKey(e) {
   if (k === ' ' || k === 'r') { e.preventDefault(); if (canRoll()) act('roll'); }
   else if (k === 'c') { if (canKeep()) act('continue'); }
   else if (k === 'p' || k === 'enter') { e.preventDefault(); if (canKeep()) act('bank'); }
+  else if (k === 't') onMyTokenClick();
+  else if (k === 'escape' && fortuneMode) { fortuneMode = false; updateUI(); }
   else if (k === 'm') toggleSound();
 }
 
 /* ------------------------------------------------------------------ */
 /* UI                                                                  */
 /* ------------------------------------------------------------------ */
+
+function tokenStatus(tok, seat) {
+  if (!tok) {
+    const d = game.draws && game.draws[seat];
+    if (game.stage === 'draw') return d === null ? (game.current === seat ? 'Drawing…' : 'Draws next') : (tierFor(d) < 0 ? 'Busted the draw' : `${METALS[tierFor(d)]} (${fmt(d)})`);
+    if (game.stage === 'pick') return tierFor(d) < 0 ? 'No token' : `${METALS[tierFor(d)]} · ${hasPicked(seat) ? 'chosen' : 'choosing…'}`;
+    return 'No token';
+  }
+  if (tok.cancelled) return 'Blocked by Ward';
+  const v = tokenVal(tok);
+  switch (tok.type) {
+    case 'headstart': return `+${fmt(v)} at start`;
+    case 'ward': return 'Ward · resolved';
+    case 'rally': return tok.spent ? 'Rally · used' : (tok.armed ? `Armed: +${v}% next bank` : `+${v}% · tap to arm`);
+    case 'wind': return tok.spent ? 'Second Wind · used' : (tok.armed ? `Ready: keeps ${v}% on bust` : `Held · tap to ready`);
+    case 'fortune': return tok.spent ? 'Fortune · used' : `${tok.uses} re-roll${tok.uses > 1 ? 's' : ''} · tap, then a die`;
+    case 'toll': return tok.spent ? 'Toll · used' : `−${v}% of their next bank`;
+    default: return '';
+  }
+}
+
+function renderChip(el, tok, seat, mine) {
+  const img = el.querySelector('img');
+  const txt = el.querySelector('.tc-text');
+  const show = !!game && (game.stage !== 'draw' || game.draws[seat] !== null || game.current === seat);
+  el.hidden = !show;
+  if (!show) return;
+  if (tok) {
+    const src = tokenImageUrl(tok.type, tok.tier);
+    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+  }
+  txt.textContent = tokenStatus(tok, seat);
+  el.classList.toggle('spent', !!tok && (tok.spent || tok.cancelled));
+  el.classList.toggle('armed', !!tok && tok.armed && !tok.spent);
+  const actionable = mine && tok && tokenUsable(tok) && (
+    tok.type === 'wind' || (tok.type === 'rally' && game.current === mySeat && ['ready', 'selecting'].includes(game.phase)) || (tok.type === 'fortune' && canFortune()));
+  el.classList.toggle('actionable', !!actionable);
+  el.classList.toggle('active-mode', mine && fortuneMode);
+  if (mine) el.disabled = !actionable;
+  el.title = tok ? `${tokenTitle(tok)}: ${TOKEN_INFO[tok.type].text(tokenVal(tok))}` : '';
+}
+
+function renderPrompt() {
+  let html = '';
+  if (game && game.phase === 'tollPending' && game.prompt && game.prompt.seat === mySeat) {
+    html = `<span>Use your Toll? Their ${fmt(game.prompt.banked)} would lose <b>${fmt(game.prompt.cut)}</b>.</span>
+      <button class="btn gold" data-p="toll-yes">Use Toll</button><button class="btn ghost" data-p="toll-no">Save it</button>`;
+  } else if (fortuneMode && canFortune()) {
+    html = `<span>Tap a die to re-roll it.</span><button class="btn ghost" data-p="fortune-cancel">Cancel</button>`;
+  } else if (game && game.phase === 'bustPending' && game.current === mySeat && !animating) {
+    const tok = myToken();
+    html = `<span>Nothing scores. Use Fortune (${tok ? tok.uses : 0} left)?</span>
+      <button class="btn gold" data-p="fortune">Re-roll a die</button><button class="btn ghost" data-p="bust">Take the bust</button>`;
+  }
+  if (promptBar.dataset.html !== html) {
+    promptBar.innerHTML = html;
+    promptBar.dataset.html = html;
+  }
+  promptBar.classList.toggle('show', !!html);
+}
+
+function renderPicker() {
+  const show = !!game && game.stage === 'pick' && mode !== 'offline';
+  pickModal.classList.toggle('show', show);
+  if (!show) { pickModal.dataset.key = ''; return; }
+  const myTier = tierFor(game.draws[mySeat]);
+  const theirTier = tierFor(game.draws[other(mySeat)]);
+  const picked = hasPicked(mySeat);
+  const key = `${myTier}|${theirTier}|${picked}|${hasPicked(other(mySeat))}|${mode}`;
+  if (pickModal.dataset.key === key) return;
+  pickModal.dataset.key = key;
+  const oppName = mode === 'ai' ? 'The computer' : 'Your opponent';
+  pickTitle.textContent = myTier < 0 ? 'No token this match' : `Your token: ${METALS[myTier]}`;
+  pickSub.textContent = (myTier < 0 ? 'You busted the draw. ' : `You drew ${fmt(game.draws[mySeat])}. `) +
+    (theirTier < 0 ? `${oppName} busted and gets no token.` : `${oppName} drew ${METALS[theirTier]}${hasPicked(other(mySeat)) ? ' and has chosen.' : ' and is choosing.'}`);
+  if (myTier < 0 || picked) {
+    pickGrid.innerHTML = '';
+    pickWait.hidden = false;
+    pickWait.textContent = myTier < 0 ? `Waiting for ${oppName.toLowerCase()} to choose…` : `Chosen. Waiting for ${oppName.toLowerCase()}…`;
+    return;
+  }
+  pickWait.hidden = true;
+  pickGrid.innerHTML = TOKEN_TYPES.map(type => {
+    const v = TOKEN_INFO[type].vals[myTier];
+    return `<button class="pick-card" data-type="${type}">
+      <canvas class="statue-view" width="${IS_MOBILE ? 180 : 220}" height="${IS_MOBILE ? 180 : 220}" data-type="${type}" data-tier="${myTier}"></canvas>
+      <b>${TOKEN_INFO[type].name}</b>
+      <em>${TOKEN_INFO[type].role}</em>
+      <span>${TOKEN_INFO[type].text(v)}</span>
+    </button>`;
+  }).join('');
+  registerTurntables(pickGrid);
+}
 
 function updateUI() {
   if (!game) return;
@@ -55256,10 +56418,12 @@ function updateUI() {
   playerBars.forEach(el => { el.style.width = `${Math.min(100, (game.totals[me] / WIN_SCORE) * 100)}%`; });
   aiBars.forEach(el => { el.style.width = `${Math.min(100, (game.totals[them] / WIN_SCORE) * 100)}%`; });
   const myTurn = game.current === me;
-  playerRow.classList.toggle('active', myTurn && !game.winner);
-  aiRow.classList.toggle('active', !myTurn && !game.winner);
+  const playing = game.stage === 'draw' || game.stage === 'match';
+  playerRow.classList.toggle('active', playing && myTurn && !game.winner);
+  aiRow.classList.toggle('active', playing && !myTurn && !game.winner);
   hud.classList.toggle('my-turn', myTurn);
 
+  if (fortuneMode && !canFortune()) fortuneMode = false;
   dice.forEach((d, i) => { d.selected = game.phase === 'selecting' && game.selected.has(i); });
 
   const selected = selectedActiveValues();
@@ -55277,21 +56441,44 @@ function updateUI() {
   else if (projected >= 300) tier = 'medium';
   else if (projected > 0) tier = 'small';
   turnPouch.className = `turn-pouch ${tier}`;
-  turnPouchLabel.textContent = !myTurn
-    ? `${oppLabel}’s turn`
-    : (selected.length && !selectedScore.valid ? 'Not a scoring pick' : (selectedScore.valid && selected.length ? 'At stake if kept' : 'At stake this turn'));
+  turnPouch.hidden = !playing;
+  if (game.stage === 'draw') {
+    const t = tierFor(projected);
+    turnPouchLabel.textContent = myTurn ? (t < 0 ? 'Draw score' : `Draw: ${METALS[t]} token`) : `${oppLabel}’s draw`;
+  } else {
+    turnPouchLabel.textContent = !myTurn
+      ? `${oppLabel}’s turn`
+      : (selected.length && !selectedScore.valid ? 'Not a scoring pick' : (selectedScore.valid && selected.length ? 'At stake if kept' : 'At stake this turn'));
+  }
 
-  turnRibbon.textContent = game.winner ? 'Match over' : (myTurn ? 'Your throw' : `${oppLabel}’s throw`);
-  turnRibbon.className = `turn-ribbon ${myTurn ? 'player' : 'ai'}`;
+  let ribbon;
+  if (game.winner) ribbon = 'Match over';
+  else if (game.stage === 'draw') ribbon = myTurn ? 'Your token draw' : `${oppLabel}’s token draw`;
+  else if (game.stage === 'pick' || game.stage === 'reveal') ribbon = 'Choose tokens';
+  else ribbon = myTurn ? 'Your throw' : `${oppLabel}’s throw`;
+  turnRibbon.textContent = ribbon;
+  turnRibbon.className = `turn-ribbon ${myTurn || !playing ? 'player' : 'ai'}`;
 
   const keepOk = canKeep();
   rollBtn.disabled = !canRoll();
   continueBtn.disabled = !keepOk;
   passBtn.disabled = !keepOk;
-  passBtn.querySelector('.btn-sub').textContent = keepOk ? `bank ${fmt(projected)}` : 'bank points';
+  passBtn.querySelector('span').textContent = game.stage === 'draw' ? 'Keep & take token' : 'Keep & bank';
+  if (game.stage === 'draw') {
+    const t = tierFor(projected);
+    passBtn.querySelector('.btn-sub').textContent = keepOk ? (t < 0 ? 'no token' : `${METALS[t]} token`) : 'take token';
+  } else {
+    passBtn.querySelector('.btn-sub').textContent = keepOk ? `bank ${fmt(projected)}` : 'bank points';
+  }
   continueBtn.querySelector('.btn-sub').textContent = keepOk ? `${game.active.length - selected.length || 6} dice left` : 'risk it';
-  controlsEl.classList.toggle('waiting', !myTurn || !!game.winner);
+  controlsEl.classList.toggle('waiting', !myTurn || !!game.winner || !playing);
   netBadge.hidden = mode !== 'online';
+
+  renderChip(myChip, game.tokens ? game.tokens[me] : null, me, true);
+  renderChip(oppChip, game.tokens ? game.tokens[them] : null, them, false);
+  renderPrompt();
+  renderPicker();
+  refreshTokens3D();
 }
 
 function pulse(el) {
@@ -55305,6 +56492,7 @@ function setBanner(text) {
 }
 
 function addLog(kind, text) {
+  if (!text) return;
   const li = document.createElement('li');
   li.className = kind;
   li.textContent = text;
@@ -55356,6 +56544,28 @@ function showModal(title, text, kind, showAgain) {
 
 function openSheet(open) {
   document.body.classList.toggle('sheet-open', open);
+}
+
+function buildTokenKey() {
+  const desc = {
+    headstart: 'Start the match with bonus points.',
+    rally: 'Once: arm it, and your next banked turn earns a bonus.',
+    wind: 'Once: when you bust, keep part of that turn’s points.',
+    fortune: 'Re-roll a single die after a throw — even a bust.',
+    toll: 'Once: right after your opponent banks, cut that turn.',
+    ward: TOKEN_INFO.ward.text()
+  };
+  const range = {
+    headstart: '50 → 500 points', rally: '+10% → +50%', wind: 'keeps 15% → 75%',
+    fortune: '1 → 5 re-rolls', toll: '−10% → −50%', ward: ''
+  };
+  const rows = TOKEN_TYPES.map(type => {
+    const info = TOKEN_INFO[type];
+    return `<div class="tk-row"><img alt="" src="${tokenImageUrl(type, 6)}" /><div><b>${info.name}</b> <em>${info.role}</em><span>${desc[type]}${range[type] ? ` <i>Wood → Gold: ${range[type]}.</i>` : ''}</span></div></div>`;
+  }).join('');
+  const metals = METALS.map((m, i) => `<span><img alt="" src="${tokenImageUrl('wind', i)}" />${m} ${fmt(TIER_MIN[i])}+</span>`).join('');
+  tokenKeyBody.innerHTML = `<p class="key-note">Before each match, both players take one draw turn. What you bank sets your token's metal; a bust means no token. Then each picks a token. The lower draw throws first.</p>
+    <div class="tk-metals">${metals}</div>${rows}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -55741,6 +56951,25 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', resi
 scoringKey.open = storageGet('kcd2DiceScoringKeyCollapsed', IS_MOBILE ? 'true' : 'false') !== 'true';
 scoringKey.addEventListener('toggle', () => storageSet('kcd2DiceScoringKeyCollapsed', String(!scoringKey.open)));
 updateSoundBtn();
+buildTokenKey();
+myChip.addEventListener('click', onMyTokenClick);
+pickGrid.addEventListener('click', (e) => {
+  const card = e.target.closest('.pick-card');
+  if (!card) return;
+  pickGrid.querySelectorAll('.pick-card').forEach(c => { c.disabled = true; });
+  card.classList.add('chosen');
+  act('pick', { type: card.dataset.type });
+});
+promptBar.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-p]');
+  if (!b) return;
+  const p = b.dataset.p;
+  if (p === 'toll-yes') act('toll', { use: true });
+  else if (p === 'toll-no') act('toll', { use: false });
+  else if (p === 'fortune') { fortuneMode = true; updateUI(); }
+  else if (p === 'fortune-cancel') { fortuneMode = false; updateUI(); }
+  else if (p === 'bust') act('acceptBust');
+});
 
 const hashRoom = (location.hash.match(/room=(\d+)/) || [])[1];
 roomInput.value = hashRoom || storageGet('kcd2DiceRoom', '');
@@ -55750,7 +56979,9 @@ setBanner('Choose how to play.');
 // Small hook for automated checks.
 window.__diceDuel = {
   get game() { return game; }, dice, get camera() { return camera; },
-  get net() { return { mode, role, mySeat, open: !!(conn && conn.open) }; }
+  get net() { return { mode, role, mySeat, open: !!(conn && conn.open) }; },
+  tokenImageUrl,
+  renderStatue
 };
 
 })();
