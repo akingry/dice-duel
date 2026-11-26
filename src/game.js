@@ -66,7 +66,6 @@ let dice = [];
 let game;
 let hoveredIdx = -1;
 let audioCtx = null;
-let noiseBuffer = null;
 let soundOn = storageGet('kcd2DiceSound', 'true') !== 'false';
 const coinStacks = { mine: null, theirs: null };
 let mode = 'ai';        // 'ai' | 'online' | 'offline' (online game that lost its opponent)
@@ -1071,7 +1070,7 @@ function updateDie(die, dt, t) {
       // Fire impact sounds as each bounce lands.
       while (a.contacts.length && p >= a.contacts[0].p) {
         const c = a.contacts.shift();
-        playImpact(c.v, die.mesh.position.x);
+        playImpact(c.v, die.mesh.position.x, !!c.first);
       }
     } else {
       const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -1212,22 +1211,21 @@ function updatePopups() {
 /* Audio                                                               */
 /* ------------------------------------------------------------------ */
 /*
- * Everything is synthesised (no sound files), from physical models:
- *  - bone dice: short inharmonic "modal" knocks plus a burst of contact noise
- *  - leather board / wooden table: low damped thumps with a quick pitch drop
- *  - gold coins: long-ringing inharmonic partials of a thick metal disc
- *  - music cues: Karplus-Strong plucked strings (a lute/lyre) and bells
- * Sounds are pre-rendered into small buffers (several variants each, so repeats
- * never sound identical) and played through a soft room reverb.
+ * Real recorded sounds (CC0, by Kenney — see sounds/CREDITS.txt), embedded in
+ * the page as MP3 data by build_standalone.py and decoded on the first click.
+ * Each event picks a random take from its group and varies pitch slightly, so
+ * repeats never sound identical. A light room reverb adds a tavern feel.
  */
 
-let sfx = null; // { ctx, master, dry, wet, buffers }
+const SOUND_DATA = /*__SOUNDS__*/{};
+
+let sfx = null; // { ctx, master, dry, conv, B: { group: [AudioBuffer] } }
 
 function toggleSound() {
   soundOn = !soundOn;
   storageSet('kcd2DiceSound', String(soundOn));
   updateSoundBtn();
-  if (soundOn) { unlockGameAudio(); setTimeout(() => playUiTick(), 30); }
+  if (soundOn) { unlockGameAudio(); setTimeout(() => playUiTick(), 60); }
 }
 function updateSoundBtn() {
   soundBtn.textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off';
@@ -1256,209 +1254,74 @@ function readyCtx() {
   return ctx.state === 'running' ? ctx : null;
 }
 
-/* --- buffer synthesis helpers --- */
-
-function mkBuffer(ctx, seconds, fill, channels = 1) {
-  const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
-  const buf = ctx.createBuffer(channels, len, ctx.sampleRate);
-  for (let c = 0; c < channels; c++) fill(buf.getChannelData(c), ctx.sampleRate, c);
-  normalise(buf);
-  return buf;
-}
-function normalise(buf, peak = 0.9) {
-  let m = 0;
-  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) m = Math.max(m, Math.abs(d[i])); }
-  if (m > 0) for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= peak / m; }
-}
-// Sum of exponentially damped sinusoids: [freq, amplitude, decaySeconds]
-function addModes(d, sr, modes, start = 0) {
-  for (const [f, a, tau] of modes) {
-    const w = 2 * Math.PI * f / sr, ph = Math.random() * Math.PI * 2;
-    const n = Math.min(d.length - start, Math.floor(sr * tau * 7));
-    for (let i = 0; i < n; i++) d[start + i] += a * Math.sin(w * i + ph) * Math.exp(-i / (sr * tau));
-  }
-}
-// Contact noise: a short burst through a one-pole high/low pass blend.
-function addNoise(d, sr, dur, amp, bright = 0.5, start = 0, decay = 0.004) {
-  let lp = 0;
-  const n = Math.min(d.length - start, Math.floor(sr * dur));
-  for (let i = 0; i < n; i++) {
-    const x = Math.random() * 2 - 1;
-    lp += (x - lp) * (0.05 + bright * 0.6);
-    const v = bright > 0.5 ? x - lp : lp;
-    d[start + i] += amp * v * Math.exp(-i / (sr * decay));
-  }
-}
-// Thump with a falling pitch (soft body hitting a surface).
-function addThump(d, sr, f0, f1, tau, amp, start = 0) {
-  let ph = 0;
-  const n = Math.min(d.length - start, Math.floor(sr * tau * 6));
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    const f = f1 + (f0 - f1) * Math.exp(-t / (tau * 0.35));
-    ph += 2 * Math.PI * f / sr;
-    d[start + i] += amp * Math.sin(ph) * Math.exp(-t / tau) * Math.min(1, i / (sr * 0.0015));
-  }
-}
-// Karplus-Strong plucked string.
-function pluck(ctx, freq, seconds = 1.6, bright = 0.5, damp = 0.996) {
-  return mkBuffer(ctx, seconds, (d, sr) => {
-    const N = Math.max(2, Math.round(sr / freq));
-    const line = new Float32Array(N);
-    let lp = 0;
-    for (let i = 0; i < N; i++) { const x = Math.random() * 2 - 1; lp += (x - lp) * (0.25 + bright * 0.7); line[i] = lp; }
-    let idx = 0, prev = 0;
-    for (let i = 0; i < d.length; i++) {
-      const cur = line[idx];
-      const next = (cur + prev) * 0.5 * damp;
-      prev = cur;
-      line[idx] = next;
-      d[i] = cur;
-      idx = (idx + 1) % N;
-    }
-    // body resonance + soft attack
-    for (let i = 0; i < Math.min(d.length, sr * 0.003); i++) d[i] *= i / (sr * 0.003);
-  });
-}
-function bell(ctx, f0, seconds = 2.4, bright = 1) {
-  return mkBuffer(ctx, seconds, (d, sr) => {
-    addModes(d, sr, [[f0 * 0.5, 0.35, 1.2], [f0, 1, 1.0], [f0 * 1.19, 0.3, 0.7], [f0 * 2.0, 0.5 * bright, 0.55], [f0 * 2.74, 0.35 * bright, 0.35], [f0 * 4.07, 0.2 * bright, 0.2]]);
-    addNoise(d, sr, 0.01, 0.15, 0.9);
-  });
-}
-function roomImpulse(ctx, seconds = 1.3) {
+function roomImpulse(ctx, seconds = 0.9) {
   const buf = ctx.createBuffer(2, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
   for (let c = 0; c < 2; c++) {
     const d = buf.getChannelData(c);
     for (let i = 0; i < d.length; i++) {
       const t = i / ctx.sampleRate;
-      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t / seconds, 2.2) * (t < 0.012 ? 0.2 : 1);
-    }
-    // a few early reflections off nearby walls / tabletop
-    for (const [ms, g] of [[11, 0.7], [17, 0.5], [29, 0.4], [41, 0.3]]) {
-      const k = Math.floor(ctx.sampleRate * (ms + c * 2) / 1000);
-      if (k < d.length) d[k] += g;
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t / seconds, 2.6) * (t < 0.01 ? 0.15 : 0.5);
     }
   }
   return buf;
 }
 
+function decodeData(ctx, b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Promise((resolve) => {
+    try {
+      const p = ctx.decodeAudioData(bytes.buffer, resolve, () => resolve(null));
+      if (p && p.then) p.then(resolve, () => resolve(null));
+    } catch { resolve(null); }
+  });
+}
+
 function buildSfx(ctx) {
   const master = ctx.createGain();
-  master.gain.value = 0.9;
+  master.gain.value = 0.95;
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.003; comp.release.value = 0.2;
+  comp.threshold.value = -12; comp.knee.value = 8; comp.ratio.value = 3; comp.attack.value = 0.002; comp.release.value = 0.2;
   master.connect(comp); comp.connect(ctx.destination);
   const dry = ctx.createGain(); dry.gain.value = 1; dry.connect(master);
   const conv = ctx.createConvolver(); conv.buffer = roomImpulse(ctx);
-  const wet = ctx.createGain(); wet.gain.value = 0.22;
+  const wet = ctx.createGain(); wet.gain.value = 0.14;
   conv.connect(wet); wet.connect(master);
   const B = {};
-  const variants = (n, f) => Array.from({ length: n }, (_, i) => f(i));
-
-  // Bone die knocking another die / cup wall: bright, very short, inharmonic.
-  B.boneClick = variants(8, () => mkBuffer(ctx, 0.12, (d, sr) => {
-    const k = rand(0.85, 1.2);
-    addModes(d, sr, [[2350 * k, 1, 0.018], [3920 * k, 0.6, 0.012], [5650 * k, 0.4, 0.008], [1450 * k, 0.35, 0.025]]);
-    addNoise(d, sr, 0.006, 0.7, 0.9, 0, 0.0015);
-  }));
-  // Dice tumbling inside a leather cup: muffled thump of the cup wall.
-  B.cupThump = variants(4, () => mkBuffer(ctx, 0.15, (d, sr) => {
-    addThump(d, sr, rand(260, 320), rand(170, 210), 0.035, 1);
-    addNoise(d, sr, 0.03, 0.5, 0.2, 0, 0.01);
-  }));
-  // Die landing on the leather-topped board: soft low body + small corner click.
-  B.boardLand = variants(6, () => mkBuffer(ctx, 0.3, (d, sr) => {
-    addThump(d, sr, rand(190, 240), rand(95, 125), 0.06, 1);
-    addModes(d, sr, [[rand(520, 640), 0.45, 0.03], [rand(880, 1040), 0.25, 0.02]]);
-    addNoise(d, sr, 0.02, 0.35, 0.25, 0, 0.006);
-    addModes(d, sr, [[rand(2400, 3200), 0.25, 0.01]], Math.floor(sr * 0.001));
-  }));
-  // Die sliding / rolling across the leather: short scuffs.
-  B.scuff = variants(4, () => mkBuffer(ctx, 0.18, (d, sr) => {
-    let lp = 0;
-    for (let i = 0; i < d.length; i++) {
-      const t = i / sr;
-      lp += ((Math.random() * 2 - 1) - lp) * 0.08;
-      const env = Math.sin(Math.PI * Math.min(1, t / 0.18)) * (0.6 + 0.4 * Math.sin(t * 140));
-      d[i] = lp * env;
-    }
-  }));
-  // Gold stater landing on another coin: thick small disc, long bright ring.
-  B.coin = variants(6, () => mkBuffer(ctx, 0.9, (d, sr) => {
-    const f = rand(2900, 3700);
-    addModes(d, sr, [[f, 1, 0.32], [f * 2.31, 0.5, 0.18], [f * 3.89, 0.3, 0.12], [f * 1.48, 0.25, 0.22], [f * 5.12, 0.15, 0.06]]);
-    const g = f * rand(0.92, 1.08); // the coin it lands on rings too
-    addModes(d, sr, [[g, 0.5, 0.26], [g * 2.31, 0.25, 0.14]], Math.floor(sr * 0.002));
-    addNoise(d, sr, 0.005, 0.5, 0.95, 0, 0.0012);
-  }));
-  // Statuette set down on the wooden table (wood vs. metal versions).
-  B.tokenWood = variants(2, () => mkBuffer(ctx, 0.5, (d, sr) => {
-    addThump(d, sr, rand(150, 180), rand(80, 95), 0.08, 1);
-    addModes(d, sr, [[rand(380, 430), 0.5, 0.05], [rand(720, 800), 0.3, 0.03], [rand(1500, 1700), 0.12, 0.015]]);
-    addNoise(d, sr, 0.02, 0.4, 0.3, 0, 0.005);
-  }));
-  B.tokenMetal = variants(2, () => mkBuffer(ctx, 1.2, (d, sr) => {
-    addThump(d, sr, rand(150, 180), rand(80, 95), 0.07, 1);
-    addModes(d, sr, [[rand(380, 430), 0.4, 0.04]]);
-    const f = rand(1050, 1250);
-    addModes(d, sr, [[f, 0.35, 0.4], [f * 2.71, 0.2, 0.22], [f * 5.15, 0.1, 0.1]]);
-    addNoise(d, sr, 0.015, 0.35, 0.6, 0, 0.003);
-  }));
-  // UI: small wooden tick, and a softer one for picking a die.
-  B.tick = variants(3, () => mkBuffer(ctx, 0.08, (d, sr) => {
-    addModes(d, sr, [[rand(1700, 1900), 1, 0.012], [rand(3300, 3600), 0.35, 0.006]]);
-    addNoise(d, sr, 0.004, 0.4, 0.9, 0, 0.001);
-  }));
-  // Low drum (frame drum / tympanon) for bust and victory.
-  B.drum = variants(2, () => mkBuffer(ctx, 0.9, (d, sr) => {
-    addThump(d, sr, 120, 62, 0.22, 1);
-    addModes(d, sr, [[180, 0.25, 0.15], [330, 0.12, 0.08]]);
-    addNoise(d, sr, 0.05, 0.25, 0.3, 0, 0.012);
-  }));
-  // Lute / lyre notes (D Dorian-ish scale) and bells, rendered on demand and cached.
-  B.notes = new Map();
-  B.bells = new Map();
   sfx = { ctx, master, dry, conv, B };
+  for (const [name, b64] of Object.entries(SOUND_DATA)) {
+    const group = name.replace(/_\d+$/, '');
+    decodeData(ctx, b64).then(buf => { if (buf) (B[group] = B[group] || []).push(buf); });
+  }
 }
 
-function note(freq) {
-  const key = Math.round(freq);
-  if (!sfx.B.notes.has(key)) sfx.B.notes.set(key, pluck(sfx.ctx, freq, 1.8, 0.45, 0.9965));
-  return sfx.B.notes.get(key);
-}
-function bellBuf(freq) {
-  const key = Math.round(freq);
-  if (!sfx.B.bells.has(key)) sfx.B.bells.set(key, bell(sfx.ctx, freq));
-  return sfx.B.bells.get(key);
-}
 const pickVar = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const NOTE = (name) => {
-  const map = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 };
-  const m = name.match(/^([A-G])(#|b)?(\d)$/);
-  const semis = map[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (Number(m[3]) - 4) * 12;
-  return 440 * Math.pow(2, semis / 12);
-};
 
-function playBuf(buf, { gain = 1, rate = 1, pan = 0, at = 0, wet = 1 } = {}) {
+// Play a random take from a sound group.
+function playSound(group, { gain = 1, rate = 1, pan = 0, at = 0, wet = 1, offset = 0, duration = 0, fade = 0.08 } = {}) {
   const ctx = readyCtx();
-  if (!ctx || !buf) return;
+  if (!ctx) return;
+  const list = sfx.B[group];
+  if (!list || !list.length) return;
+  const buf = pickVar(list);
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.playbackRate.value = rate;
   const g = ctx.createGain();
-  g.gain.value = gain;
+  const t0 = ctx.currentTime + Math.max(0, at);
+  g.gain.setValueAtTime(gain, t0);
+  if (duration > 0) {
+    g.gain.setValueAtTime(gain, t0 + Math.max(0, duration - fade));
+    g.gain.linearRampToValueAtTime(0.0001, t0 + duration);
+  }
   let node = g;
   if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); node = p; }
   src.connect(g);
   node.connect(sfx.dry);
-  if (wet > 0) {
-    const send = ctx.createGain();
-    send.gain.value = wet;
-    node.connect(send);
-    send.connect(sfx.conv);
-  }
-  src.start(ctx.currentTime + Math.max(0, at));
+  if (wet > 0) { const send = ctx.createGain(); send.gain.value = wet; node.connect(send); send.connect(sfx.conv); }
+  if (duration > 0) src.start(t0, offset, duration + 0.02);
+  else src.start(t0, offset);
 }
 
 // Pan by a world x position on the table (-7..7).
@@ -1466,115 +1329,111 @@ const panX = (x) => Math.max(-0.8, Math.min(0.8, (x || 0) / 8));
 
 /* --- game sounds --- */
 
-function playRattle(count = 6) {
-  if (!readyCtx()) return;
-  // Shaking the cup: three strokes, each a thump of the cup and a cluster of dice knocks.
-  const strokes = count > 1 ? 3 : 2;
-  for (let s = 0; s < strokes; s++) {
-    const t0 = s * 0.1 + rand(0, 0.012);
-    playBuf(pickVar(sfx.B.cupThump), { gain: 0.32, at: t0, rate: rand(0.95, 1.05), wet: 0.5 });
-    const hits = Math.max(2, Math.round(count * rand(0.8, 1.3)));
-    for (let h = 0; h < hits; h++) {
-      playBuf(pickVar(sfx.B.boneClick), { gain: rand(0.08, 0.2), at: t0 + rand(0.004, 0.07), rate: rand(0.8, 1.05), pan: rand(-0.15, 0.15), wet: 0.6 });
-    }
-  }
+let lastThrowClip = -10;
+
+// Dice shaken in the cup before a throw.
+function playShake(seconds = 0.72) {
+  playSound('shake', { gain: 0.9, rate: rand(0.96, 1.04), duration: seconds, fade: 0.14, wet: 0.6 });
+}
+
+// The dice leaving the cup and clattering onto the board; `at` = first landing.
+function playThrow(count, at) {
+  const ctx = readyCtx();
+  if (!ctx) return;
+  lastThrowClip = ctx.currentTime + at;
+  playSound('throw', { gain: 0.45 + count * 0.09, rate: rand(0.95, 1.05), at: Math.max(0, at - 0.06), wet: 0.8 });
+}
+
+// A Fortune re-roll: one die picked up and tossed again.
+function playRattle(count = 1) {
+  if (count > 1) { playShake(0.5); return; }
+  playSound('grab', { gain: 0.5, rate: rand(0.95, 1.08), duration: 0.45, wet: 0.5 });
 }
 
 let lastImpact = 0;
-function playImpact(strength, x = 0) {
+// Later bounces of a die on the leather board (the first landing is in the throw clip).
+function playImpact(strength, x = 0, first = false) {
   const ctx = readyCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - lastImpact < 0.01) return;
+  if (first && Math.abs(now - lastThrowClip) < 0.5) return;
+  if (now - lastImpact < 0.03) return;
   lastImpact = now;
   const s = Math.max(0.05, Math.min(1, strength));
-  playBuf(pickVar(sfx.B.boardLand), { gain: 0.15 + s * 0.55, rate: rand(0.92, 1.08), pan: panX(x), wet: 0.8 });
-  if (s > 0.3) {
-    // dice knocking each other and the board's corners as they scatter
-    const n = Math.round(s * 3);
-    for (let i = 0; i < n; i++) playBuf(pickVar(sfx.B.boneClick), { gain: rand(0.05, 0.14) * s, at: rand(0.01, 0.09), rate: rand(0.85, 1.1), pan: panX(x) + rand(-0.1, 0.1) });
-    playBuf(pickVar(sfx.B.scuff), { gain: 0.12 * s, at: 0.02, rate: rand(0.8, 1.2), pan: panX(x), wet: 0.3 });
-  }
+  playSound('bounce', { gain: 0.12 + s * 0.45, rate: rand(0.9, 1.15), pan: panX(x), wet: 0.5 });
+}
+
+function playHoldSound() {
+  playSound('grab', { gain: 0.45, rate: rand(0.97, 1.06), wet: 0.4 });
 }
 
 let lastClink = 0;
-function playCoinClink(x = 6) {
+function playCoinClink(x = 5) {
   const ctx = readyCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - lastClink < 0.035) return;
+  if (now - lastClink < 0.045) return;
   lastClink = now;
-  playBuf(pickVar(sfx.B.coin), { gain: rand(0.12, 0.22), rate: rand(0.94, 1.06), pan: panX(x), wet: 0.7 });
+  playSound('coin', { gain: rand(0.22, 0.34), rate: rand(0.95, 1.12), pan: panX(x), wet: 0.6 });
+}
+
+function playCoinsHandful(x = 5) {
+  playSound('coins_handful', { gain: 0.55, pan: panX(x), wet: 0.5 });
 }
 
 function playTokenThunk(tier, x = 0) {
-  if (!readyCtx()) return;
-  playBuf(pickVar(tier === 0 ? sfx.B.tokenWood : sfx.B.tokenMetal), { gain: 0.55, rate: rand(0.95, 1.05) * (tier >= 5 ? 1.08 : 1), pan: panX(x), wet: 0.8 });
+  playSound(tier === 0 ? 'tokenwood' : 'tokenmetal', { gain: 0.6, rate: rand(0.95, 1.05) * (tier >= 5 ? 1.08 : 1), pan: panX(x), wet: 0.7 });
 }
 
 function playSelectTick(on = true) {
-  if (!readyCtx()) return;
-  playBuf(pickVar(sfx.B.boneClick), { gain: 0.2, rate: on ? 1.1 : 0.9, wet: 0.3 });
+  playSound('tap', { gain: on ? 0.32 : 0.24, rate: on ? 1.12 : 0.95, wet: 0.3 });
 }
 
 function playUiTick() {
-  if (!readyCtx()) return;
-  playBuf(pickVar(sfx.B.tick), { gain: 0.16, rate: rand(0.97, 1.03), wet: 0.25 });
+  playSound('click', { gain: 0.28, rate: rand(0.97, 1.04), wet: 0.2 });
 }
 
-// Phrase on the lute: [noteName, startSeconds, gain]
-function playPhrase(notes, { rate = 1, wet = 1, gain = 1 } = {}) {
-  if (!readyCtx()) return;
-  for (const [n, at, g] of notes) playBuf(note(NOTE(n)), { gain: (g ?? 0.3) * gain, at, rate, pan: rand(-0.2, 0.2), wet });
-}
+function playKeepSound() { /* the dice pick-up sound covers keeping dice */ }
 
-function playKeepSound(points, mine) {
-  if (!readyCtx()) return;
-  // A soft plucked note that rises with the size of the keep.
-  const steps = ['D4', 'E4', 'F4', 'G4', 'A4', 'C5', 'D5'];
-  const i = Math.min(steps.length - 1, Math.floor(Math.log2(Math.max(50, points) / 50)));
-  playPhrase([[steps[i], 0, mine ? 0.2 : 0.14]]);
+/* Soft phrases on a real folk harp (VCSL, CC0), in the Dorian mode. Samples are
+   recorded every whole tone (sample "C3" sounds as middle C); in-between notes are
+   retuned from the nearest sample. */
+const HARP_SAMPLES = ['C3', 'D3', 'E3', 'Fs3', 'Gs3', 'As3', 'C4', 'D4', 'E4', 'Fs4', 'Gs4', 'As4', 'C5', 'D5', 'E5', 'Fs5'].map(n => {
+  const pc = { C: 0, D: 2, E: 4, Fs: 6, Gs: 8, As: 10 }[n.slice(0, -1)];
+  return { group: 'harp_' + n, midi: 12 * (Number(n.slice(-1)) + 2) + pc };
+});
+function noteMidi(name) {
+  const m = name.match(/^([A-G])(#|b)?(\d)$/);
+  const pc = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+  return 12 * (Number(m[3]) + 1) + pc;
 }
-
-function playYourTurn() {
-  playPhrase([['A3', 0, 0.22], ['D4', 0.12, 0.26], ['A4', 0.24, 0.2]]);
-}
-
-function playHotDice() {
-  playPhrase([['D4', 0, 0.22], ['F4', 0.08, 0.22], ['A4', 0.16, 0.24], ['D5', 0.24, 0.28], ['F5', 0.34, 0.22]]);
-}
-
-function playBustSound() {
-  if (!readyCtx()) return;
-  playBuf(pickVar(sfx.B.drum), { gain: 0.5, wet: 0.7 });
-  playPhrase([['E4', 0.05, 0.22], ['C4', 0.2, 0.22], ['A3', 0.38, 0.26]], { gain: 1 });
-}
-
-function playChime(kind) {
-  if (!readyCtx()) return;
-  if (kind === 'metal') {
-    playBuf(bellBuf(NOTE('A5')), { gain: 0.18, wet: 1.2 });
-    playBuf(bellBuf(NOTE('E6')), { gain: 0.1, at: 0.12, wet: 1.2 });
-  } else if (kind === 'reveal') {
-    ['D5', 'A5', 'D6'].forEach((n, i) => playBuf(bellBuf(NOTE(n)), { gain: 0.14, at: i * 0.11, wet: 1.2 }));
-  } else if (kind === 'tokenGood') {
-    playBuf(bellBuf(NOTE('F#5')), { gain: 0.16, wet: 1.2 });
-    playBuf(bellBuf(NOTE('A5')), { gain: 0.12, at: 0.08, wet: 1.2 });
-  } else if (kind === 'tokenBad') {
-    playBuf(bellBuf(NOTE('C5')), { gain: 0.16, wet: 1.2, rate: 0.94 });
-    playBuf(pickVar(sfx.B.drum), { gain: 0.25, wet: 0.6 });
+function harp(notes, { gain = 2.6, wet = 0.8 } = {}) {
+  for (const [name, at, g] of notes) {
+    const midi = noteMidi(name);
+    let best = HARP_SAMPLES[0];
+    for (const s of HARP_SAMPLES) if (Math.abs(s.midi - midi) < Math.abs(best.midi - midi)) best = s;
+    playSound(best.group, { gain: (g ?? 0.2) * gain, rate: Math.pow(2, (midi - best.midi) / 12), at, wet, pan: rand(-0.15, 0.15) });
   }
 }
 
+function playYourTurn() { harp([['D4', 0, 0.2], ['A4', 0.16, 0.18]]); }
+function playHotDice() { harp([['D4', 0, 0.18], ['F4', 0.09, 0.18], ['A4', 0.18, 0.19], ['D5', 0.27, 0.2]]); }
+function playBustSound() { harp([['A4', 0, 0.16], ['F4', 0.2, 0.16], ['D4', 0.4, 0.18]]); }
+
+function playChime(kind) {
+  if (kind === 'metal') harp([['A4', 0, 0.18], ['E5', 0.13, 0.15]]);
+  else if (kind === 'reveal') harp([['D4', 0, 0.16], ['F#4', 0.1, 0.16], ['A4', 0.2, 0.17], ['D5', 0.3, 0.18]]);
+  else if (kind === 'tokenGood') harp([['A4', 0, 0.17], ['D5', 0.11, 0.16]]);
+  else if (kind === 'tokenBad') harp([['E4', 0, 0.16], ['C4', 0.16, 0.16]]);
+}
+
 function playFanfare(win) {
-  if (!readyCtx()) return;
-  playBuf(pickVar(sfx.B.drum), { gain: 0.45, wet: 0.8 });
   if (win) {
-    playPhrase([['D4', 0.05, 0.3], ['A4', 0.05, 0.22], ['D4', 0.3, 0.26], ['F#4', 0.42, 0.26], ['A4', 0.54, 0.28], ['D5', 0.7, 0.32], ['F#5', 0.7, 0.2], ['A5', 0.7, 0.18]]);
-    ['D6', 'A6'].forEach((n, i) => playBuf(bellBuf(NOTE(n)), { gain: 0.08, at: 0.7 + i * 0.1, wet: 1.3 }));
-    playBuf(pickVar(sfx.B.drum), { gain: 0.35, at: 0.7, wet: 0.8 });
+    harp([['D4', 0, 0.16], ['A4', 0.08, 0.16], ['D5', 0.16, 0.17], ['F#5', 0.24, 0.17],
+      ['D4', 0.62, 0.16], ['F#4', 0.62, 0.14], ['A4', 0.62, 0.15], ['D5', 0.66, 0.16]]);
+    playCoinsHandful(0);
   } else {
-    playPhrase([['A4', 0.05, 0.26], ['F4', 0.3, 0.26], ['D4', 0.55, 0.26], ['C#4', 0.85, 0.24], ['D4', 1.15, 0.3]]);
+    harp([['A4', 0, 0.16], ['G4', 0.24, 0.15], ['F4', 0.48, 0.15], ['E4', 0.72, 0.15], ['D4', 0.98, 0.17]]);
   }
 }
 
@@ -2204,6 +2063,7 @@ function localThrow({ indices, values, ends, yaws, owner }) {
   const fromZ = owner === mySeat ? 7.5 : -7.5;
   animating++;
   updateUI();
+  let firstLanding = Infinity;
   const promises = indices.map((idx, order) => new Promise(resolve => {
     const die = dice[idx];
     die.value = values[order];
@@ -2219,16 +2079,18 @@ function localThrow({ indices, values, ends, yaws, owner }) {
     const spin = Math.PI * 2 * rand(2.2, 3.6);
     const startQuat = new THREE.Quaternion().setFromAxisAngle(axis, spin).multiply(endQuat);
     const bounce = rand(0.65, 1.0);
+    const delay = order * rand(0.03, 0.07), duration = rand(1.15, 1.45);
+    firstLanding = Math.min(firstLanding, delay + duration * 0.3);
     die.anim = {
-      type: 'throw', t: 0, delay: order * rand(0.03, 0.07), duration: rand(1.15, 1.45),
+      type: 'throw', t: 0, delay, duration,
       startPos, endPos, startQuat, endQuat, axis, spin, bounce,
-      contacts: [{ p: 0.3, v: 1 }, { p: 0.56, v: bounce * 0.6 }, { p: 0.75, v: bounce * 0.25 }, { p: 0.88, v: 0.08 }],
+      contacts: [{ p: 0.3, v: 1, first: true }, { p: 0.56, v: bounce * 0.6 }, { p: 0.75, v: bounce * 0.25 }, { p: 0.88, v: 0.08 }],
       resolve
     };
     die.mesh.position.copy(startPos);
     die.mesh.quaternion.copy(startQuat);
   }));
-  playRattle(indices.length);
+  playThrow(indices.length, firstLanding);
   return Promise.all(promises).then(() => { animating--; updateUI(); });
 }
 
@@ -2267,6 +2129,7 @@ function moveDie(die, endPos, endQuat, duration = 0.5, hop = 0.7, delay = 0) {
 }
 
 function localHold({ indices }) {
+  playHoldSound();
   const existing = dice.filter((d, i) => d.held && !indices.includes(i)).length;
   return Promise.all(indices.map((idx, n) => {
     const die = dice[idx];
@@ -2314,6 +2177,7 @@ const pick = (seat, you, them) => (seat && !isMe(seat) ? them : you);
 function runFx(op, a) {
   switch (op) {
     case 'reset': localReset(); return null;
+    case 'shake': playShake(); return null;
     case 'throw': return localThrow(a);
     case 'reroll': return localReroll(a);
     case 'hold': return localHold(a);
@@ -2338,7 +2202,10 @@ function runFx(op, a) {
     case 'coins':
       rebuildCoins('player', a.totals.player);
       rebuildCoins('ai', a.totals.ai);
-      if (a.seat) pulse(isMe(a.seat) ? playerRow : aiRow);
+      if (a.seat) {
+        pulse(isMe(a.seat) ? playerRow : aiRow);
+        playCoinsHandful((isMe(a.seat) ? coinStacks.mine : coinStacks.theirs).position.x);
+      }
       return null;
     case 'win': showWinner(a.seat, a.totals); return null;
     default: return null;
@@ -2437,7 +2304,8 @@ async function doRoll(seat) {
   const yaws = values.map(() => +rand(-Math.PI, Math.PI).toFixed(3));
   sync();
   emit('banner', { seat, you: 'You shake the dice…', them: `${seatName(seat)} shakes the dice…` });
-  await sleep(320);
+  emit('shake');
+  await sleep(720);
   if (token !== gameToken) return;
   emit('log', { seat, you: `You roll ${values.join(', ')}.`, them: `${seatName(seat)} rolls ${values.join(', ')}.` });
   await emit('throw', { indices: [...game.active], values, ends, yaws, owner: seat });
@@ -3695,5 +3563,6 @@ window.__diceDuel = {
   refresh: () => updateUI(),
   tokenMeshes,
   rebuildCoins,
-  get scene() { return scene; }
+  get scene() { return scene; },
+  get sfxGroups() { return sfx ? Object.fromEntries(Object.entries(sfx.B).map(([k, v]) => [k, v.length])) : null; }
 };
