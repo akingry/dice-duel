@@ -1,6 +1,6 @@
 """Build dice_duel.html: one self-contained file that runs by double-clicking (no server).
 
-Inputs (next to this script): three.module.js, peerjs.min.js (PeerJS 1.5.5), src/template.html, src/styles.css, src/game.js
+Inputs (next to this script): three.module.js, peerjs.min.js (PeerJS 1.5.5), fonts/cinzel-*.woff2 (OFL), src/template.html, src/styles.css, src/game.js
 Usage:  python build_standalone.py            (writes dice_duel.html)
         python build_standalone.py --out index.html
 """
@@ -29,6 +29,13 @@ def three_as_global() -> str:
 
 def main():
     html = (SRC / "template.html").read_text(encoding="utf-8")
+    import base64
+    fonts = ""
+    for weight in (400, 700):
+        data = base64.b64encode((ROOT / "fonts" / f"cinzel-latin-{weight}-normal.woff2").read_bytes()).decode()
+        fonts += ("@font-face { font-family: 'Cinzel'; font-style: normal; font-display: swap; font-weight: %d; "
+                  "src: url(data:font/woff2;base64,%s) format('woff2'); }\n" % (weight, data))
+    html = html.replace("/*__FONTS__*/", fonts)
     css = (SRC / "styles.css").read_text(encoding="utf-8")
     game = (SRC / "game.js").read_text(encoding="utf-8")
     script = three_as_global() + "\n(function () {\n" + game + "\n})();\n"
