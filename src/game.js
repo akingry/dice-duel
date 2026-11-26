@@ -75,7 +75,6 @@ let mySeat = 'player';  // the seat this screen plays; seats are 'player' (host 
 let animating = 0;
 let guestReady = false;
 const IS_MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(screen.width, screen.height) < 700;
-let coinGeometry, coinMaterial;
 let gameToken = 0; // invalidates async turn loops when a new game starts
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -176,16 +175,11 @@ function init3D() {
   buildTankard(new THREE.Vector3(6.5, -0.12, -2.6));
   buildDust();
 
-  coinGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.065, 32);
-  coinMaterial = [
-    new THREE.MeshStandardMaterial({ color: 0xc9953a, metalness: 0.95, roughness: 0.38 }),
-    new THREE.MeshStandardMaterial({ map: makeCoinTexture(), metalness: 0.9, roughness: 0.32 }),
-    new THREE.MeshStandardMaterial({ map: makeCoinTexture(), metalness: 0.9, roughness: 0.32 })
-  ];
+  buildCoins();
   coinStacks.mine = new THREE.Group();
-  coinStacks.mine.position.set(5.9, -0.12, 2.6);
+  coinStacks.mine.position.set(5.2, -0.12, 3.3);
   coinStacks.theirs = new THREE.Group();
-  coinStacks.theirs.position.set(-5.9, -0.12, 2.4);
+  coinStacks.theirs.position.set(-4.7, -0.12, -4.3);
   scene.add(coinStacks.mine, coinStacks.theirs);
 
   const dieGeometry = makeRoundedBox(1, 0.13, 6);
@@ -664,30 +658,275 @@ function makeLeatherTexture() {
   return finishTexture(cnv);
 }
 
-function makeCoinTexture() {
-  const size = 256;
-  const [cnv, ctx] = canvas2d(size);
-  const c = size / 2;
-  const g = ctx.createRadialGradient(c * 0.8, c * 0.7, 10, c, c, c);
-  g.addColorStop(0, '#ffe29a');
-  g.addColorStop(0.7, '#d4a043');
-  g.addColorStop(1, '#8a5c1c');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = 'rgba(90, 55, 10, 0.8)';
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.arc(c, c, c * 0.84, 0, Math.PI * 2); ctx.stroke();
-  for (let i = 0; i < 40; i++) {
-    const a = (i / 40) * Math.PI * 2;
-    ctx.fillStyle = 'rgba(90, 55, 10, 0.7)';
-    ctx.beginPath(); ctx.arc(c + Math.cos(a) * c * 0.92, c + Math.sin(a) * c * 0.92, 3, 0, Math.PI * 2); ctx.fill();
+/* ------------------------------------------------------------------ */
+/* Gold staters for the score piles                                    */
+/* Modelled on the gold stater of Alexander III of Macedon (c. 336–323 */
+/* BC): obverse, Athena in a crested Corinthian helmet; reverse, Nike  */
+/* holding out a wreath, legend ΑΛΕΞΑΝΔΡΟΥ ("of Alexander").           */
+/* Each face is painted as a height map, turned into a normal map so   */
+/* the relief catches the light, and tinted gold (worn high points,    */
+/* darker toned fields). Flans are thick and slightly irregular, with  */
+/* the dies struck a little off-centre, as on real coins.              */
+/* ------------------------------------------------------------------ */
+
+function boxBlur(src, w, h, r) {
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  const win = 2 * r + 1;
+  for (let y = 0; y < h; y++) {
+    let acc = 0;
+    for (let x = -r; x <= r; x++) acc += src[y * w + Math.min(w - 1, Math.max(0, x))];
+    for (let x = 0; x < w; x++) {
+      tmp[y * w + x] = acc / win;
+      acc += src[y * w + Math.min(w - 1, x + r + 1)] - src[y * w + Math.max(0, x - r)];
+    }
   }
-  ctx.font = `bold ${size * 0.42}px Georgia, serif`;
+  for (let x = 0; x < w; x++) {
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = acc / win;
+      acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+function paintObverse(ctx) {
+  // Coordinates in a 1000-unit box; white = high relief.
+  const S = (pts) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
+  const curve = (cmds) => {
+    ctx.beginPath();
+    for (const c of cmds) {
+      if (c[0] === 'M') ctx.moveTo(c[1], c[2]);
+      else if (c[0] === 'L') ctx.lineTo(c[1], c[2]);
+      else if (c[0] === 'Q') ctx.quadraticCurveTo(c[1], c[2], c[3], c[4]);
+      else if (c[0] === 'C') ctx.bezierCurveTo(c[1], c[2], c[3], c[4], c[5], c[6]);
+    }
+    ctx.closePath();
+  };
+  // Neck and face (facing right)
+  ctx.fillStyle = 'rgb(200,200,200)';
+  curve([['M', 395, 900], ['C', 380, 820, 372, 760, 372, 700], ['L', 380, 560], ['L', 610, 470],
+    ['C', 640, 500, 668, 540, 690, 580], ['L', 712, 600], ['C', 702, 612, 690, 616, 684, 622],
+    ['C', 690, 636, 686, 646, 676, 652], ['C', 684, 664, 678, 676, 668, 680],
+    ['C', 664, 712, 646, 728, 618, 736], ['C', 612, 790, 612, 840, 640, 900]]);
+  ctx.fill();
+  // Helmet bowl, brim and neck guard
+  ctx.fillStyle = 'rgb(245,245,245)';
+  curve([['M', 300, 560], ['C', 260, 420, 330, 270, 470, 240], ['C', 580, 220, 670, 300, 690, 410],
+    ['L', 712, 440], ['C', 690, 470, 650, 485, 610, 488], ['C', 560, 490, 470, 500, 430, 520],
+    ['C', 400, 560, 370, 600, 340, 610], ['C', 320, 600, 305, 585, 300, 560]]);
+  ctx.fill();
+  // Crest sweeping back from the crown
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgb(200,200,200)';
+  ctx.lineWidth = 70;
+  ctx.beginPath(); ctx.moveTo(600, 270); ctx.bezierCurveTo(520, 130, 330, 120, 230, 250); ctx.quadraticCurveTo(190, 310, 205, 390); ctx.stroke();
+  // Hair curls falling below the helmet onto the neck
+  ctx.fillStyle = 'rgb(195,195,195)';
+  for (const [x, y, r] of [[350, 640, 34], [372, 700, 30], [340, 700, 26], [395, 640, 28], [368, 760, 24]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+  // Necklace beads
+  for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(420 + i * 28, 820 - i * 6, 9, 0, Math.PI * 2); ctx.fill(); }
+  return { grooves: (g) => {
+    g.lineCap = 'round';
+    // crest strands
+    g.lineWidth = 8;
+    for (let i = 0; i < 16; i++) {
+      const t = i / 15;
+      const x = 600 - t * 370, y = 270 - Math.sin(t * Math.PI) * 140 + (t > 0.8 ? (t - 0.8) * 400 : 0);
+      g.beginPath(); g.moveTo(x - 18, y - 30); g.lineTo(x + 22, y + 32); g.stroke();
+    }
+    g.lineWidth = 10;
+    // helmet brim edge and visor line
+    g.beginPath(); g.moveTo(712, 440); g.bezierCurveTo(660, 480, 560, 470, 430, 520); g.stroke();
+    g.beginPath(); g.moveTo(690, 410); g.bezierCurveTo(600, 420, 520, 420, 470, 440); g.stroke();
+    // serpent coiled on the bowl
+    g.lineWidth = 9;
+    g.beginPath(); g.moveTo(560, 400);
+    for (let k = 0; k <= 12; k++) g.lineTo(560 - k * 18, 400 - Math.sin(k * 1.1) * 26 - k * 6);
+    g.stroke();
+    // eye, brow, lips, nostril, ear-guard
+    g.lineWidth = 9;
+    g.beginPath(); g.ellipse(632, 548, 22, 11, -0.2, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(600, 520); g.quadraticCurveTo(635, 505, 665, 528); g.stroke();
+    g.beginPath(); g.moveTo(668, 652); g.lineTo(645, 655); g.stroke();
+    g.beginPath(); g.arc(680, 612, 7, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.moveTo(612, 736); g.quadraticCurveTo(590, 760, 560, 762); g.stroke();
+    // neck truncation line
+    g.lineWidth = 12;
+    g.beginPath(); g.moveTo(392, 895); g.quadraticCurveTo(520, 860, 640, 898); g.stroke();
+    // hair curl hollows
+    g.lineWidth = 6;
+    for (const [x, y, r] of [[350, 640, 16], [372, 700, 14], [340, 700, 12], [395, 640, 13]]) { g.beginPath(); g.arc(x, y, r, 0.5, 5.5); g.stroke(); }
+  } };
+}
+
+function paintReverse(ctx) {
+  ctx.fillStyle = 'rgb(185,185,185)';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // Nike: head, body in a long chiton, wings raised behind, arm holding out a wreath.
+  ctx.beginPath(); ctx.arc(455, 300, 40, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(430, 345); ctx.lineTo(500, 345);
+  ctx.bezierCurveTo(520, 480, 560, 640, 590, 800); ctx.lineTo(380, 805);
+  ctx.bezierCurveTo(400, 640, 410, 480, 430, 345); ctx.fill();
+  ctx.fillStyle = 'rgb(205,205,205)';
+  // wings
+  ctx.beginPath(); ctx.moveTo(490, 360); ctx.bezierCurveTo(560, 250, 640, 160, 730, 120);
+  ctx.bezierCurveTo(700, 230, 650, 330, 560, 460); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgb(165,165,165)';
+  ctx.beginPath(); ctx.moveTo(500, 380); ctx.bezierCurveTo(580, 300, 660, 240, 760, 230);
+  ctx.bezierCurveTo(710, 320, 640, 400, 560, 500); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgb(185,185,185)';
+  // arm and wreath
+  ctx.strokeStyle = 'rgb(185,185,185)';
+  ctx.lineWidth = 30;
+  ctx.beginPath(); ctx.moveTo(440, 380); ctx.quadraticCurveTo(380, 360, 320, 330); ctx.stroke();
+  ctx.lineWidth = 16;
+  ctx.beginPath(); ctx.arc(290, 320, 44, 0, Math.PI * 2); ctx.stroke();
+  // stylis (ship's mast) held in the other arm
+  ctx.lineWidth = 14;
+  ctx.beginPath(); ctx.moveTo(500, 400); ctx.lineTo(560, 760); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(540, 470); ctx.lineTo(600, 455); ctx.stroke();
+  // control symbol in the field: a small thunderbolt
+  ctx.lineWidth = 12;
+  ctx.beginPath(); ctx.moveTo(250, 620); ctx.lineTo(330, 620); ctx.stroke();
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(290, 620); ctx.lineTo(290 + s * 30, 590); ctx.moveTo(290, 620); ctx.lineTo(290 + s * 30, 650); ctx.stroke(); }
+  // Legend running down the right side
+  ctx.save();
+  ctx.translate(815, 500);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = 'bold 86px "Palatino Linotype", "Times New Roman", Georgia, serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(110, 70, 15, 0.85)';
-  ctx.fillText('G', c, c + 4);
-  return finishTexture(cnv);
+  ctx.fillText('ΑΛΕΞΑΝΔΡΟΥ', 0, 0);
+  ctx.restore();
+  return { grooves: (g) => {
+    g.lineCap = 'round';
+    g.lineWidth = 7;
+    // drapery folds
+    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(440 + i * 14, 420); g.quadraticCurveTo(430 + i * 26, 620, 410 + i * 32, 790); g.stroke(); }
+    // wing feathers
+    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(520 + i * 30, 360 - i * 30); g.lineTo(560 + i * 34, 430 - i * 38); g.stroke(); }
+    // ground line (exergue)
+    g.lineWidth = 10;
+    g.beginPath(); g.moveTo(330, 815); g.lineTo(650, 815); g.stroke();
+    // face detail
+    g.lineWidth = 6;
+    g.beginPath(); g.arc(440, 296, 6, 0, Math.PI * 2); g.stroke();
+  } };
+}
+
+function strikeFace(painter, size, offX, offY, mirror = false) {
+  const [hc, hctx] = canvas2d(size);
+  hctx.fillStyle = 'rgb(70,70,70)'; // field
+  hctx.fillRect(0, 0, size, size);
+  hctx.save();
+  hctx.scale(size / 1000, size / 1000);
+  hctx.translate(offX, offY);
+  // beaded border (partly off the flan, as on struck coins)
+  hctx.fillStyle = 'rgb(150,150,150)';
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    hctx.beginPath(); hctx.arc(500 + Math.cos(a) * 455, 500 + Math.sin(a) * 455, 11, 0, Math.PI * 2); hctx.fill();
+  }
+  const { grooves } = painter(hctx);
+  hctx.restore();
+  // Grooves (cut into the raised design)
+  const [gc, gctx] = canvas2d(size);
+  gctx.save();
+  gctx.scale(size / 1000, size / 1000);
+  gctx.translate(offX, offY);
+  gctx.strokeStyle = '#fff';
+  grooves(gctx);
+  gctx.restore();
+
+  const hd = hctx.getImageData(0, 0, size, size).data;
+  const gd = gctx.getImageData(0, 0, size, size).data;
+  const raw = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i++) raw[i] = hd[i * 4] / 255;
+  // Rounded, domed relief: crisp edges from a small blur plus bulging forms from a large one.
+  const crisp = boxBlur(boxBlur(raw, size, size, Math.max(2, Math.round(size / 180))), size, size, 1);
+  const bigR = Math.max(4, Math.round(size / 30));
+  const dome = boxBlur(boxBlur(raw, size, size, bigR), size, size, bigR);
+  const h = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i++) h[i] = crisp[i] * 0.5 + Math.min(crisp[i], dome[i]) * 0.7;
+  const gr = new Float32Array(size * size);
+  for (let i = 0; i < size * size; i++) gr[i] = gd[i * 4 + 3] / 255;
+  const gb = boxBlur(gr, size, size, 1);
+  for (let i = 0; i < size * size; i++) {
+    // grooves only where there is relief; a little granular wear everywhere
+    h[i] = h[i] - gb[i] * 0.14 * Math.min(1, h[i] * 2) + (Math.random() - 0.5) * 0.012;
+  }
+
+  // Normal map (Sobel) and colour map
+  const [nc, nctx] = canvas2d(size);
+  const [cc, cctx] = canvas2d(size);
+  const nImg = nctx.createImageData(size, size);
+  const cImg = cctx.createImageData(size, size);
+  const strength = size / 240;
+  const at = (x, y) => h[Math.min(size - 1, Math.max(0, y)) * size + Math.min(size - 1, Math.max(0, x))];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+      const dy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+      let nx = -dx * strength, ny = dy * strength, nz = 1;
+      const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+      const k = (y * size + x) * 4;
+      nImg.data[k] = (nx * 0.5 + 0.5) * 255;
+      nImg.data[k + 1] = (ny * 0.5 + 0.5) * 255;
+      nImg.data[k + 2] = (nz * 0.5 + 0.5) * 255;
+      nImg.data[k + 3] = 255;
+      // Gold: toned/dirty in the low fields, bright and worn on the high points.
+      const v = h[y * size + x];
+      const lift = Math.min(1, Math.max(0, (v - 0.25) * 1.8));
+      const grime = (1 - lift) * (0.25 + Math.random() * 0.1);
+      cImg.data[k] = Math.min(255, 236 - grime * 70 + lift * 18);
+      cImg.data[k + 1] = Math.min(255, 182 - grime * 75 + lift * 26);
+      cImg.data[k + 2] = Math.min(255, 84 - grime * 40 + lift * 30);
+      cImg.data[k + 3] = 255;
+    }
+  }
+  nctx.putImageData(nImg, 0, 0);
+  cctx.putImageData(cImg, 0, 0);
+  const normal = new THREE.CanvasTexture(nc);
+  const color = finishTexture(cc);
+  if (mirror) {
+    for (const t of [normal, color]) { t.wrapS = THREE.RepeatWrapping; t.repeat.x = -1; t.offset.x = 1; }
+  }
+  return { normal, color };
+}
+
+let coinGeometries = [], coinMaterials = [];
+
+function buildCoins() {
+  const size = IS_MOBILE ? 256 : 384;
+  // Two strikes of each face (different off-centre offsets) give variety in the pile.
+  const obv = [strikeFace(paintObverse, size, 18, -14), strikeFace(paintObverse, size, -22, 10)];
+  const rev = [strikeFace(paintReverse, size, -16, 12, true), strikeFace(paintReverse, size, 20, -8, true)];
+  const env = scene.environment;
+  const side = new THREE.MeshStandardMaterial({ color: 0xe0b04c, metalness: 0.85, roughness: 0.38, envMap: env, envMapIntensity: 2.6 });
+  coinMaterials = [0, 1].map(i => [
+    side,
+    new THREE.MeshStandardMaterial({ map: obv[i].color, normalMap: obv[i].normal, normalScale: new THREE.Vector2(1, 1), metalness: 0.85, roughness: 0.32, envMap: env, envMapIntensity: 2.6 }),
+    new THREE.MeshStandardMaterial({ map: rev[i].color, normalMap: rev[i].normal, normalScale: new THREE.Vector2(1, 1), metalness: 0.85, roughness: 0.32, envMap: env, envMapIntensity: 2.6 })
+  ]);
+  // Irregular, thick flans.
+  coinGeometries = [0, 1, 2, 3].map(() => {
+    const g = new THREE.CylinderGeometry(0.29, 0.29, 0.07, 48, 1);
+    const p1 = rand(0, 6), p2 = rand(0, 6), a1 = rand(0.02, 0.045), a2 = rand(0.01, 0.025);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      const r = Math.hypot(x, z);
+      if (r < 1e-4) continue;
+      const th = Math.atan2(z, x);
+      const k = 1 + a1 * Math.sin(3 * th + p1) + a2 * Math.sin(5 * th + p2);
+      pos.setX(i, x * k); pos.setZ(i, z * k);
+    }
+    g.computeVertexNormals();
+    return g;
+  });
 }
 
 function makeGlowTexture() {
@@ -832,7 +1071,7 @@ function updateDie(die, dt, t) {
       // Fire impact sounds as each bounce lands.
       while (a.contacts.length && p >= a.contacts[0].p) {
         const c = a.contacts.shift();
-        playImpact(c.v);
+        playImpact(c.v, die.mesh.position.x);
       }
     } else {
       const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
@@ -905,15 +1144,17 @@ function rebuildCoins(who, total, animateDrop = true) {
   const target = coinTarget(total);
   while (group.children.length > target) group.remove(group.children[group.children.length - 1]);
   for (let i = group.children.length; i < target; i++) {
-    const coin = new THREE.Mesh(coinGeometry, coinMaterial);
+    const coin = new THREE.Mesh(pickVar(coinGeometries), pickVar(coinMaterials));
     const stack = Math.floor(i / 12);
     const level = i % 12;
     const offsets = [[0, 0], [0.66, 0.15], [0.25, 0.65], [-0.45, 0.45], [-0.5, -0.25]];
     const [ox, oz] = offsets[stack % offsets.length];
-    coin.userData.restY = 0.035 + level * 0.068;
+    coin.userData.restY = 0.035 + level * 0.072;
     coin.position.set(ox + rand(-0.03, 0.03), animateDrop ? coin.userData.restY + 2.5 + (i - group.children.length) * 0.25 : coin.userData.restY, oz + rand(-0.03, 0.03));
     coin.rotation.y = rand(0, Math.PI * 2);
-    coin.rotation.z = rand(-0.03, 0.03);
+    coin.rotation.z = rand(-0.035, 0.035);
+    coin.rotation.x = rand(-0.03, 0.03);
+    if (Math.random() < 0.3) coin.rotation.x += Math.PI; // some land reverse-up
     coin.userData.vy = 0;
     coin.castShadow = true;
     coin.receiveShadow = true;
@@ -924,13 +1165,14 @@ function rebuildCoins(who, total, animateDrop = true) {
 function updateCoins(dt) {
   for (const group of [coinStacks.mine, coinStacks.theirs]) {
     for (const coin of group.children) {
+      const gx = group.position.x;
       const ry = coin.userData.restY;
       if (coin.position.y > ry) {
         coin.userData.vy -= 22 * dt;
         coin.position.y += coin.userData.vy * dt;
         if (coin.position.y <= ry) {
           coin.position.y = ry;
-          if (coin.userData.vy < -3) playCoinClink();
+          if (coin.userData.vy < -3) playCoinClink(gx);
           coin.userData.vy = 0;
         }
       }
@@ -969,11 +1211,23 @@ function updatePopups() {
 /* ------------------------------------------------------------------ */
 /* Audio                                                               */
 /* ------------------------------------------------------------------ */
+/*
+ * Everything is synthesised (no sound files), from physical models:
+ *  - bone dice: short inharmonic "modal" knocks plus a burst of contact noise
+ *  - leather board / wooden table: low damped thumps with a quick pitch drop
+ *  - gold coins: long-ringing inharmonic partials of a thick metal disc
+ *  - music cues: Karplus-Strong plucked strings (a lute/lyre) and bells
+ * Sounds are pre-rendered into small buffers (several variants each, so repeats
+ * never sound identical) and played through a soft room reverb.
+ */
+
+let sfx = null; // { ctx, master, dry, wet, buffers }
 
 function toggleSound() {
   soundOn = !soundOn;
   storageSet('kcd2DiceSound', String(soundOn));
   updateSoundBtn();
+  if (soundOn) { unlockGameAudio(); setTimeout(() => playUiTick(), 30); }
 }
 function updateSoundBtn() {
   soundBtn.textContent = soundOn ? '🔊 Sound on' : '🔇 Sound off';
@@ -984,129 +1238,344 @@ function getAudioContext() {
   const AudioCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtor) return null;
   if (!audioCtx) audioCtx = new AudioCtor();
-  if (!noiseBuffer) {
-    noiseBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  }
   return audioCtx;
 }
 
 function unlockGameAudio() {
   try {
     const ctx = getAudioContext();
-    if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (!sfx) buildSfx(ctx);
   } catch { /* audio is optional */ }
 }
 
 function readyCtx() {
-  if (!soundOn) return null;
-  try {
-    const ctx = getAudioContext();
-    if (!ctx || ctx.state !== 'running') return null;
-    return ctx;
-  } catch { return null; }
+  if (!soundOn || !sfx) return null;
+  const ctx = sfx.ctx;
+  return ctx.state === 'running' ? ctx : null;
 }
 
-function playRattle() {
+/* --- buffer synthesis helpers --- */
+
+function mkBuffer(ctx, seconds, fill, channels = 1) {
+  const len = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+  const buf = ctx.createBuffer(channels, len, ctx.sampleRate);
+  for (let c = 0; c < channels; c++) fill(buf.getChannelData(c), ctx.sampleRate, c);
+  normalise(buf);
+  return buf;
+}
+function normalise(buf, peak = 0.9) {
+  let m = 0;
+  for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) m = Math.max(m, Math.abs(d[i])); }
+  if (m > 0) for (let c = 0; c < buf.numberOfChannels; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= peak / m; }
+}
+// Sum of exponentially damped sinusoids: [freq, amplitude, decaySeconds]
+function addModes(d, sr, modes, start = 0) {
+  for (const [f, a, tau] of modes) {
+    const w = 2 * Math.PI * f / sr, ph = Math.random() * Math.PI * 2;
+    const n = Math.min(d.length - start, Math.floor(sr * tau * 7));
+    for (let i = 0; i < n; i++) d[start + i] += a * Math.sin(w * i + ph) * Math.exp(-i / (sr * tau));
+  }
+}
+// Contact noise: a short burst through a one-pole high/low pass blend.
+function addNoise(d, sr, dur, amp, bright = 0.5, start = 0, decay = 0.004) {
+  let lp = 0;
+  const n = Math.min(d.length - start, Math.floor(sr * dur));
+  for (let i = 0; i < n; i++) {
+    const x = Math.random() * 2 - 1;
+    lp += (x - lp) * (0.05 + bright * 0.6);
+    const v = bright > 0.5 ? x - lp : lp;
+    d[start + i] += amp * v * Math.exp(-i / (sr * decay));
+  }
+}
+// Thump with a falling pitch (soft body hitting a surface).
+function addThump(d, sr, f0, f1, tau, amp, start = 0) {
+  let ph = 0;
+  const n = Math.min(d.length - start, Math.floor(sr * tau * 6));
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    const f = f1 + (f0 - f1) * Math.exp(-t / (tau * 0.35));
+    ph += 2 * Math.PI * f / sr;
+    d[start + i] += amp * Math.sin(ph) * Math.exp(-t / tau) * Math.min(1, i / (sr * 0.0015));
+  }
+}
+// Karplus-Strong plucked string.
+function pluck(ctx, freq, seconds = 1.6, bright = 0.5, damp = 0.996) {
+  return mkBuffer(ctx, seconds, (d, sr) => {
+    const N = Math.max(2, Math.round(sr / freq));
+    const line = new Float32Array(N);
+    let lp = 0;
+    for (let i = 0; i < N; i++) { const x = Math.random() * 2 - 1; lp += (x - lp) * (0.25 + bright * 0.7); line[i] = lp; }
+    let idx = 0, prev = 0;
+    for (let i = 0; i < d.length; i++) {
+      const cur = line[idx];
+      const next = (cur + prev) * 0.5 * damp;
+      prev = cur;
+      line[idx] = next;
+      d[i] = cur;
+      idx = (idx + 1) % N;
+    }
+    // body resonance + soft attack
+    for (let i = 0; i < Math.min(d.length, sr * 0.003); i++) d[i] *= i / (sr * 0.003);
+  });
+}
+function bell(ctx, f0, seconds = 2.4, bright = 1) {
+  return mkBuffer(ctx, seconds, (d, sr) => {
+    addModes(d, sr, [[f0 * 0.5, 0.35, 1.2], [f0, 1, 1.0], [f0 * 1.19, 0.3, 0.7], [f0 * 2.0, 0.5 * bright, 0.55], [f0 * 2.74, 0.35 * bright, 0.35], [f0 * 4.07, 0.2 * bright, 0.2]]);
+    addNoise(d, sr, 0.01, 0.15, 0.9);
+  });
+}
+function roomImpulse(ctx, seconds = 1.3) {
+  const buf = ctx.createBuffer(2, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < d.length; i++) {
+      const t = i / ctx.sampleRate;
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t / seconds, 2.2) * (t < 0.012 ? 0.2 : 1);
+    }
+    // a few early reflections off nearby walls / tabletop
+    for (const [ms, g] of [[11, 0.7], [17, 0.5], [29, 0.4], [41, 0.3]]) {
+      const k = Math.floor(ctx.sampleRate * (ms + c * 2) / 1000);
+      if (k < d.length) d[k] += g;
+    }
+  }
+  return buf;
+}
+
+function buildSfx(ctx) {
+  const master = ctx.createGain();
+  master.gain.value = 0.9;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.003; comp.release.value = 0.2;
+  master.connect(comp); comp.connect(ctx.destination);
+  const dry = ctx.createGain(); dry.gain.value = 1; dry.connect(master);
+  const conv = ctx.createConvolver(); conv.buffer = roomImpulse(ctx);
+  const wet = ctx.createGain(); wet.gain.value = 0.22;
+  conv.connect(wet); wet.connect(master);
+  const B = {};
+  const variants = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+
+  // Bone die knocking another die / cup wall: bright, very short, inharmonic.
+  B.boneClick = variants(8, () => mkBuffer(ctx, 0.12, (d, sr) => {
+    const k = rand(0.85, 1.2);
+    addModes(d, sr, [[2350 * k, 1, 0.018], [3920 * k, 0.6, 0.012], [5650 * k, 0.4, 0.008], [1450 * k, 0.35, 0.025]]);
+    addNoise(d, sr, 0.006, 0.7, 0.9, 0, 0.0015);
+  }));
+  // Dice tumbling inside a leather cup: muffled thump of the cup wall.
+  B.cupThump = variants(4, () => mkBuffer(ctx, 0.15, (d, sr) => {
+    addThump(d, sr, rand(260, 320), rand(170, 210), 0.035, 1);
+    addNoise(d, sr, 0.03, 0.5, 0.2, 0, 0.01);
+  }));
+  // Die landing on the leather-topped board: soft low body + small corner click.
+  B.boardLand = variants(6, () => mkBuffer(ctx, 0.3, (d, sr) => {
+    addThump(d, sr, rand(190, 240), rand(95, 125), 0.06, 1);
+    addModes(d, sr, [[rand(520, 640), 0.45, 0.03], [rand(880, 1040), 0.25, 0.02]]);
+    addNoise(d, sr, 0.02, 0.35, 0.25, 0, 0.006);
+    addModes(d, sr, [[rand(2400, 3200), 0.25, 0.01]], Math.floor(sr * 0.001));
+  }));
+  // Die sliding / rolling across the leather: short scuffs.
+  B.scuff = variants(4, () => mkBuffer(ctx, 0.18, (d, sr) => {
+    let lp = 0;
+    for (let i = 0; i < d.length; i++) {
+      const t = i / sr;
+      lp += ((Math.random() * 2 - 1) - lp) * 0.08;
+      const env = Math.sin(Math.PI * Math.min(1, t / 0.18)) * (0.6 + 0.4 * Math.sin(t * 140));
+      d[i] = lp * env;
+    }
+  }));
+  // Gold stater landing on another coin: thick small disc, long bright ring.
+  B.coin = variants(6, () => mkBuffer(ctx, 0.9, (d, sr) => {
+    const f = rand(2900, 3700);
+    addModes(d, sr, [[f, 1, 0.32], [f * 2.31, 0.5, 0.18], [f * 3.89, 0.3, 0.12], [f * 1.48, 0.25, 0.22], [f * 5.12, 0.15, 0.06]]);
+    const g = f * rand(0.92, 1.08); // the coin it lands on rings too
+    addModes(d, sr, [[g, 0.5, 0.26], [g * 2.31, 0.25, 0.14]], Math.floor(sr * 0.002));
+    addNoise(d, sr, 0.005, 0.5, 0.95, 0, 0.0012);
+  }));
+  // Statuette set down on the wooden table (wood vs. metal versions).
+  B.tokenWood = variants(2, () => mkBuffer(ctx, 0.5, (d, sr) => {
+    addThump(d, sr, rand(150, 180), rand(80, 95), 0.08, 1);
+    addModes(d, sr, [[rand(380, 430), 0.5, 0.05], [rand(720, 800), 0.3, 0.03], [rand(1500, 1700), 0.12, 0.015]]);
+    addNoise(d, sr, 0.02, 0.4, 0.3, 0, 0.005);
+  }));
+  B.tokenMetal = variants(2, () => mkBuffer(ctx, 1.2, (d, sr) => {
+    addThump(d, sr, rand(150, 180), rand(80, 95), 0.07, 1);
+    addModes(d, sr, [[rand(380, 430), 0.4, 0.04]]);
+    const f = rand(1050, 1250);
+    addModes(d, sr, [[f, 0.35, 0.4], [f * 2.71, 0.2, 0.22], [f * 5.15, 0.1, 0.1]]);
+    addNoise(d, sr, 0.015, 0.35, 0.6, 0, 0.003);
+  }));
+  // UI: small wooden tick, and a softer one for picking a die.
+  B.tick = variants(3, () => mkBuffer(ctx, 0.08, (d, sr) => {
+    addModes(d, sr, [[rand(1700, 1900), 1, 0.012], [rand(3300, 3600), 0.35, 0.006]]);
+    addNoise(d, sr, 0.004, 0.4, 0.9, 0, 0.001);
+  }));
+  // Low drum (frame drum / tympanon) for bust and victory.
+  B.drum = variants(2, () => mkBuffer(ctx, 0.9, (d, sr) => {
+    addThump(d, sr, 120, 62, 0.22, 1);
+    addModes(d, sr, [[180, 0.25, 0.15], [330, 0.12, 0.08]]);
+    addNoise(d, sr, 0.05, 0.25, 0.3, 0, 0.012);
+  }));
+  // Lute / lyre notes (D Dorian-ish scale) and bells, rendered on demand and cached.
+  B.notes = new Map();
+  B.bells = new Map();
+  sfx = { ctx, master, dry, conv, B };
+}
+
+function note(freq) {
+  const key = Math.round(freq);
+  if (!sfx.B.notes.has(key)) sfx.B.notes.set(key, pluck(sfx.ctx, freq, 1.8, 0.45, 0.9965));
+  return sfx.B.notes.get(key);
+}
+function bellBuf(freq) {
+  const key = Math.round(freq);
+  if (!sfx.B.bells.has(key)) sfx.B.bells.set(key, bell(sfx.ctx, freq));
+  return sfx.B.bells.get(key);
+}
+const pickVar = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const NOTE = (name) => {
+  const map = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 };
+  const m = name.match(/^([A-G])(#|b)?(\d)$/);
+  const semis = map[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (Number(m[3]) - 4) * 12;
+  return 440 * Math.pow(2, semis / 12);
+};
+
+function playBuf(buf, { gain = 1, rate = 1, pan = 0, at = 0, wet = 1 } = {}) {
   const ctx = readyCtx();
-  if (!ctx) return;
-  const start = ctx.currentTime + 0.01;
-  for (let i = 0; i < 9; i++) {
-    const t = start + i * 0.038 + Math.random() * 0.015;
-    playNoisePulse(ctx, ctx.destination, t, 0.035, 0.18 + Math.random() * 0.12, 900 + Math.random() * 1400, 6.5);
-    playToneClick(ctx, ctx.destination, t + 0.005, 180 + Math.random() * 220, 0.02, 0.07);
+  if (!ctx || !buf) return;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = rate;
+  const g = ctx.createGain();
+  g.gain.value = gain;
+  let node = g;
+  if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); node = p; }
+  src.connect(g);
+  node.connect(sfx.dry);
+  if (wet > 0) {
+    const send = ctx.createGain();
+    send.gain.value = wet;
+    node.connect(send);
+    send.connect(sfx.conv);
+  }
+  src.start(ctx.currentTime + Math.max(0, at));
+}
+
+// Pan by a world x position on the table (-7..7).
+const panX = (x) => Math.max(-0.8, Math.min(0.8, (x || 0) / 8));
+
+/* --- game sounds --- */
+
+function playRattle(count = 6) {
+  if (!readyCtx()) return;
+  // Shaking the cup: three strokes, each a thump of the cup and a cluster of dice knocks.
+  const strokes = count > 1 ? 3 : 2;
+  for (let s = 0; s < strokes; s++) {
+    const t0 = s * 0.1 + rand(0, 0.012);
+    playBuf(pickVar(sfx.B.cupThump), { gain: 0.32, at: t0, rate: rand(0.95, 1.05), wet: 0.5 });
+    const hits = Math.max(2, Math.round(count * rand(0.8, 1.3)));
+    for (let h = 0; h < hits; h++) {
+      playBuf(pickVar(sfx.B.boneClick), { gain: rand(0.08, 0.2), at: t0 + rand(0.004, 0.07), rate: rand(0.8, 1.05), pan: rand(-0.15, 0.15), wet: 0.6 });
+    }
   }
 }
 
 let lastImpact = 0;
-function playImpact(strength) {
+function playImpact(strength, x = 0) {
   const ctx = readyCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - lastImpact < 0.012) return;
+  if (now - lastImpact < 0.01) return;
   lastImpact = now;
-  const vol = 0.06 + strength * 0.32;
-  playToneClick(ctx, ctx.destination, now, 110 + Math.random() * 120, 0.08, vol);
-  playNoisePulse(ctx, ctx.destination, now + 0.003, 0.06, vol * 0.7, 380 + Math.random() * 500, 1.1);
-  if (strength > 0.5) playToneClick(ctx, ctx.destination, now + 0.002, 900 + Math.random() * 500, 0.025, vol * 0.25);
+  const s = Math.max(0.05, Math.min(1, strength));
+  playBuf(pickVar(sfx.B.boardLand), { gain: 0.15 + s * 0.55, rate: rand(0.92, 1.08), pan: panX(x), wet: 0.8 });
+  if (s > 0.3) {
+    // dice knocking each other and the board's corners as they scatter
+    const n = Math.round(s * 3);
+    for (let i = 0; i < n; i++) playBuf(pickVar(sfx.B.boneClick), { gain: rand(0.05, 0.14) * s, at: rand(0.01, 0.09), rate: rand(0.85, 1.1), pan: panX(x) + rand(-0.1, 0.1) });
+    playBuf(pickVar(sfx.B.scuff), { gain: 0.12 * s, at: 0.02, rate: rand(0.8, 1.2), pan: panX(x), wet: 0.3 });
+  }
 }
 
 let lastClink = 0;
-function playCoinClink() {
+function playCoinClink(x = 6) {
   const ctx = readyCtx();
   if (!ctx) return;
   const now = ctx.currentTime;
-  if (now - lastClink < 0.03) return;
+  if (now - lastClink < 0.035) return;
   lastClink = now;
-  [2400, 3600, 5200].forEach((f, i) => playToneClick(ctx, ctx.destination, now, f * rand(0.95, 1.05), 0.18 - i * 0.04, 0.05));
+  playBuf(pickVar(sfx.B.coin), { gain: rand(0.12, 0.22), rate: rand(0.94, 1.06), pan: panX(x), wet: 0.7 });
+}
+
+function playTokenThunk(tier, x = 0) {
+  if (!readyCtx()) return;
+  playBuf(pickVar(tier === 0 ? sfx.B.tokenWood : sfx.B.tokenMetal), { gain: 0.55, rate: rand(0.95, 1.05) * (tier >= 5 ? 1.08 : 1), pan: panX(x), wet: 0.8 });
+}
+
+function playSelectTick(on = true) {
+  if (!readyCtx()) return;
+  playBuf(pickVar(sfx.B.boneClick), { gain: 0.2, rate: on ? 1.1 : 0.9, wet: 0.3 });
+}
+
+function playUiTick() {
+  if (!readyCtx()) return;
+  playBuf(pickVar(sfx.B.tick), { gain: 0.16, rate: rand(0.97, 1.03), wet: 0.25 });
+}
+
+// Phrase on the lute: [noteName, startSeconds, gain]
+function playPhrase(notes, { rate = 1, wet = 1, gain = 1 } = {}) {
+  if (!readyCtx()) return;
+  for (const [n, at, g] of notes) playBuf(note(NOTE(n)), { gain: (g ?? 0.3) * gain, at, rate, pan: rand(-0.2, 0.2), wet });
+}
+
+function playKeepSound(points, mine) {
+  if (!readyCtx()) return;
+  // A soft plucked note that rises with the size of the keep.
+  const steps = ['D4', 'E4', 'F4', 'G4', 'A4', 'C5', 'D5'];
+  const i = Math.min(steps.length - 1, Math.floor(Math.log2(Math.max(50, points) / 50)));
+  playPhrase([[steps[i], 0, mine ? 0.2 : 0.14]]);
+}
+
+function playYourTurn() {
+  playPhrase([['A3', 0, 0.22], ['D4', 0.12, 0.26], ['A4', 0.24, 0.2]]);
+}
+
+function playHotDice() {
+  playPhrase([['D4', 0, 0.22], ['F4', 0.08, 0.22], ['A4', 0.16, 0.24], ['D5', 0.24, 0.28], ['F5', 0.34, 0.22]]);
 }
 
 function playBustSound() {
-  const ctx = readyCtx();
-  if (!ctx) return;
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(220, now);
-  osc.frequency.exponentialRampToValueAtTime(70, now + 0.5);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass'; filter.frequency.value = 900;
-  osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-  osc.start(now); osc.stop(now + 0.6);
+  if (!readyCtx()) return;
+  playBuf(pickVar(sfx.B.drum), { gain: 0.5, wet: 0.7 });
+  playPhrase([['E4', 0.05, 0.22], ['C4', 0.2, 0.22], ['A3', 0.38, 0.26]], { gain: 1 });
+}
+
+function playChime(kind) {
+  if (!readyCtx()) return;
+  if (kind === 'metal') {
+    playBuf(bellBuf(NOTE('A5')), { gain: 0.18, wet: 1.2 });
+    playBuf(bellBuf(NOTE('E6')), { gain: 0.1, at: 0.12, wet: 1.2 });
+  } else if (kind === 'reveal') {
+    ['D5', 'A5', 'D6'].forEach((n, i) => playBuf(bellBuf(NOTE(n)), { gain: 0.14, at: i * 0.11, wet: 1.2 }));
+  } else if (kind === 'tokenGood') {
+    playBuf(bellBuf(NOTE('F#5')), { gain: 0.16, wet: 1.2 });
+    playBuf(bellBuf(NOTE('A5')), { gain: 0.12, at: 0.08, wet: 1.2 });
+  } else if (kind === 'tokenBad') {
+    playBuf(bellBuf(NOTE('C5')), { gain: 0.16, wet: 1.2, rate: 0.94 });
+    playBuf(pickVar(sfx.B.drum), { gain: 0.25, wet: 0.6 });
+  }
 }
 
 function playFanfare(win) {
-  const ctx = readyCtx();
-  if (!ctx) return;
-  const now = ctx.currentTime;
-  const notes = win ? [523, 659, 784, 1047] : [392, 349, 311, 262];
-  notes.forEach((f, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = f;
-    const t = now + i * 0.16;
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + (i === notes.length - 1 ? 0.9 : 0.3));
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 1);
-  });
-}
-
-function playNoisePulse(ctx, destination, time, duration, volume, frequency, q) {
-  const source = ctx.createBufferSource();
-  source.buffer = noiseBuffer;
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(frequency, time);
-  filter.Q.setValueAtTime(q, time);
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(0.0001, time);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), time + 0.006);
-  gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-  source.connect(filter); filter.connect(gain); gain.connect(destination);
-  source.start(time, Math.random());
-  source.stop(time + duration + 0.02);
-}
-
-function playToneClick(ctx, destination, time, frequency, duration, volume) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(frequency, time);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(40, frequency * 0.55), time + duration);
-  gain.gain.setValueAtTime(0.0001, time);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), time + 0.004);
-  gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-  osc.connect(gain); gain.connect(destination);
-  osc.start(time);
-  osc.stop(time + duration + 0.02);
+  if (!readyCtx()) return;
+  playBuf(pickVar(sfx.B.drum), { gain: 0.45, wet: 0.8 });
+  if (win) {
+    playPhrase([['D4', 0.05, 0.3], ['A4', 0.05, 0.22], ['D4', 0.3, 0.26], ['F#4', 0.42, 0.26], ['A4', 0.54, 0.28], ['D5', 0.7, 0.32], ['F#5', 0.7, 0.2], ['A5', 0.7, 0.18]]);
+    ['D6', 'A6'].forEach((n, i) => playBuf(bellBuf(NOTE(n)), { gain: 0.08, at: 0.7 + i * 0.1, wet: 1.3 }));
+    playBuf(pickVar(sfx.B.drum), { gain: 0.35, at: 0.7, wet: 0.8 });
+  } else {
+    playPhrase([['A4', 0.05, 0.26], ['F4', 0.3, 0.26], ['D4', 0.55, 0.26], ['C#4', 0.85, 0.24], ['D4', 1.15, 0.3]]);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1681,7 +2150,7 @@ function refreshTokens3D() {
       mesh.scale.setScalar(0.8);
       const spot = tokenSpot(which);
       mesh.position.set(spot.x, spot.y + 3.5, spot.z);
-      mesh.userData = { key, rest: spot, vy: 0, dim: 0, dimShown: -1, landed: false, spin: which === 'mine' ? -0.6 : 0.6 };
+      mesh.userData = { key, tier: tok.tier, rest: spot, vy: 0, dim: 0, dimShown: -1, landed: false, spin: which === 'mine' ? -0.6 : 0.6 };
       scene.add(mesh);
       tokenMeshes[which] = mesh;
     }
@@ -1709,7 +2178,7 @@ function updateTokens3D(dt) {
       m.position.y += u.vy * dt;
       if (m.position.y <= u.rest.y) {
         m.position.y = u.rest.y;
-        if (u.vy < -3) { playCoinClink(); u.vy = -u.vy * 0.22; } else { u.vy = 0; u.landed = true; }
+        if (u.vy < -3) { playTokenThunk(u.tier, m.position.x); u.vy = -u.vy * 0.22; } else { u.vy = 0; u.landed = true; }
       }
     }
     u.dim += ((u.dimTarget || 0) - u.dim) * Math.min(1, dt * 2.5);
@@ -1759,7 +2228,7 @@ function localThrow({ indices, values, ends, yaws, owner }) {
     die.mesh.position.copy(startPos);
     die.mesh.quaternion.copy(startQuat);
   }));
-  playRattle();
+  playRattle(indices.length);
   return Promise.all(promises).then(() => { animating--; updateUI(); });
 }
 
@@ -1768,7 +2237,7 @@ function localReroll({ idx, value }) {
   die.value = value;
   animating++;
   updateUI();
-  playRattle();
+  playRattle(1);
   // Hop and tumble in place, landing on the new face.
   const endQuat = restQuat(value, rand(-0.6, 0.6));
   const axis = new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
@@ -1848,16 +2317,22 @@ function runFx(op, a) {
     case 'throw': return localThrow(a);
     case 'reroll': return localReroll(a);
     case 'hold': return localHold(a);
-    case 'popup': spawnPopup(centroid(a.indices), `+${fmt(a.points)}`, isMe(a.seat) ? 'gain' : 'ai'); playImpact(0.2); return null;
+    case 'popup': spawnPopup(centroid(a.indices), `+${fmt(a.points)}`, isMe(a.seat) ? 'gain' : 'ai'); playKeepSound(a.points, isMe(a.seat)); return null;
     case 'log': addLog(a.seat ? (isMe(a.seat) ? 'player' : 'ai') : 'system', pick(a.seat, a.you, a.them)); return null;
     case 'banner': setBanner(pick(a.seat, a.you, a.them)); return null;
     case 'stamp':
-      if (a.kind === 'bust') showBustStamp(a.word); else showStamp(a.word, a.kind);
+      if (a.kind === 'bust') showBustStamp(a.word);
+      else {
+        showStamp(a.word, a.kind);
+        if (a.word === 'HOT DICE!') playHotDice();
+        else if (a.word === 'Tokens revealed') playChime('reveal');
+        else playChime('metal');
+      }
       return null;
     case 'tokenFx': {
       const pos = tokenSpot(isMe(a.seat) ? 'mine' : 'theirs');
       spawnPopup(pos.clone().setY(0.4), a.text, a.bad ? 'bad' : (isMe(a.seat) ? 'gain' : 'ai'));
-      playCoinClink();
+      playChime(a.bad || !isMe(a.seat) ? 'tokenBad' : 'tokenGood');
       return null;
     }
     case 'coins':
@@ -2506,7 +2981,7 @@ function onPointerDown(event) {
     updateUI();
     return;
   }
-  playImpact(0.15);
+  playSelectTick(!game.selected.has(idx));
   if (mode === 'online' && role === 'guest') {
     // Toggle immediately for responsiveness; the host's state confirms it.
     if (game.selected.has(idx)) game.selected.delete(idx); else game.selected.add(idx);
@@ -2649,6 +3124,9 @@ function updateUI() {
   aiRow.classList.toggle('active', playing && !myTurn && !game.winner);
   hud.classList.toggle('my-turn', myTurn);
 
+  const myFreshTurn = playing && myTurn && game.phase === 'ready' && !game.winner && game.turnScore === 0 && game.active.length === DICE_COUNT && mode !== 'offline';
+  if (myFreshTurn && !updateUI.wasFresh) playYourTurn();
+  updateUI.wasFresh = myFreshTurn;
   if (fortuneMode && !canFortune()) fortuneMode = false;
   dice.forEach((d, i) => { d.selected = game.phase === 'selecting' && game.selected.has(i); });
 
@@ -3167,6 +3645,12 @@ cancelJoinBtn.addEventListener('click', () => {
   lobbyMsg('Cancelled.');
 });
 window.addEventListener('pointerdown', unlockGameAudio, { once: true });
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest && e.target.closest('.btn:not(:disabled), .pick-card:not(:disabled), button.token-chip:not(:disabled), .sheet-btn, .sheet-close, summary')) {
+    unlockGameAudio();
+    playUiTick();
+  }
+});
 window.addEventListener('keydown', unlockGameAudio, { once: true });
 window.addEventListener('keydown', onKey);
 canvas.addEventListener('pointerdown', onPointerDown);
@@ -3209,5 +3693,7 @@ window.__diceDuel = {
   tokenImageUrl,
   renderStatue,
   refresh: () => updateUI(),
-  tokenMeshes
+  tokenMeshes,
+  rebuildCoins,
+  get scene() { return scene; }
 };
