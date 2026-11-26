@@ -1,6 +1,6 @@
 """Build dice_duel.html: one self-contained file that runs by double-clicking (no server).
 
-Inputs (next to this script): three.module.js, peerjs.min.js (PeerJS 1.5.5), fonts/cinzel-*.woff2 (OFL), src/template.html, src/styles.css, src/game.js
+Inputs (next to this script): three.module.js, peerjs.min.js (PeerJS 1.5.5), fonts/cinzel-*.woff2 (OFL), sounds/*.mp3 (CC0, Kenney), src/template.html, src/styles.css, src/game.js
 Usage:  python build_standalone.py            (writes dice_duel.html)
         python build_standalone.py --out index.html
 """
@@ -38,6 +38,9 @@ def main():
     html = html.replace("/*__FONTS__*/", fonts)
     css = (SRC / "styles.css").read_text(encoding="utf-8")
     game = (SRC / "game.js").read_text(encoding="utf-8")
+    import json
+    sounds = {p.stem: base64.b64encode(p.read_bytes()).decode() for p in sorted((ROOT / "sounds").glob("*.mp3"))}
+    game = game.replace("/*__SOUNDS__*/{}", json.dumps(sounds))
     script = three_as_global() + "\n(function () {\n" + game + "\n})();\n"
     peer = (ROOT / "peerjs.min.js").read_text(encoding="utf-8")
     peer = re.sub(r"//# sourceMappingURL=\S+", "", peer)
